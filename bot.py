@@ -29,7 +29,9 @@ def bot_shutdown() -> None:
 
 
 @bot.on_(chain.blocks)
-def exec_block(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]) -> dict[str, float]:
+def exec_block(
+    block: BlockAPI, context: Annotated[Context, TaskiqDepends()]
+) -> dict[str, float]:
     print(f"New block: {block.number}, timestamp: {block.timestamp}")
     print("starting to sleep for 20 seconds...")
     start = time.time()
