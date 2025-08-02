@@ -2,7 +2,3 @@ node:
   ethereum:
     mainnet:
       uri: "${ETH_RPC_URL}"
-  
-  arbitrum:
-    mainnet:
-      uri: "${ARB_RPC_URL}"

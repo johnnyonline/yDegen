@@ -1,9 +1,9 @@
 services:
-  lender-borrower-monitor:
+  eth-lender-borrower-monitor:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: lender-borrower-monitor
+    container_name: eth-lender-borrower-monitor
     volumes:
       - .:/app
     working_dir: /app
