@@ -12,6 +12,6 @@ services:
       uv venv &&
       . .venv/bin/activate &&
       uv sync &&
-      silverback run --network ethereum:mainnet:
+      silverback run src.bot:bot --network :mainnet
       "
     restart: unless-stopped

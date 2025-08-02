@@ -35,7 +35,7 @@
 
 Run:
 ```shell
-silverback run --network :mainnet
+silverback run src.bot:bot --network :mainnet
 ```
 
 Run using docker compose:

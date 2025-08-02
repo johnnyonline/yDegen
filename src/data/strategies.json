@@ -1,0 +1,10 @@
+{
+    "eth": [
+        "0xStrategy1...",
+        "0xStrategy2..."
+    ],
+    "btc": [
+        "0xBtcStrategy1...",
+        "0xBtcStrategy2..."
+    ]
+}
