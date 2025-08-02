@@ -3,7 +3,7 @@ name = "lender-borrower-monitor"
 version = "0.1.0"
 description = "Real-time monitoring of Yearn’s lender borrower strategies"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "ruff==0.11.5",
     "mypy==1.15.0",
@@ -26,7 +26,7 @@ quote-style = "double"
 docstring-code-format = true
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 ignore_missing_imports = true
 strict = true
 check_untyped_defs = true
