@@ -66,7 +66,3 @@ Type checking with mypy:
 ```bash
 mypy src
 ```
-
-## Add a new Strategy
-
-TODO

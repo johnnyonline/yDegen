@@ -10,6 +10,10 @@ GROUP_CHAT_ID = int(os.getenv("GROUP_CHAT_ID", "0"))
 if GROUP_CHAT_ID == 0:
     raise RuntimeError("!GROUP_CHAT_ID")
 
+ERROR_GROUP_CHAT_ID = int(os.getenv("ERROR_GROUP_CHAT_ID", "0"))
+if ERROR_GROUP_CHAT_ID == 0:
+    raise RuntimeError("!ERROR_GROUP_CHAT_ID")
+
 
 async def notify_group_chat(
     text: str,
