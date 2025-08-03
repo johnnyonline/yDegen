@@ -1,7 +1,7 @@
 [project]
-name = "lender-borrower-monitor"
+name = "ydegen"
 version = "0.1.0"
-description = "Real-time monitoring of Yearn’s lender borrower strategies"
+description = "Real-time monitoring of Yearn’s riskier strategies, usually involving leverage"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

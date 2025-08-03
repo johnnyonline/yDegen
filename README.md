@@ -1,11 +1,11 @@
-# lender-borrower-monitor
+# yDegen
 
 ## Installation
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/johnnyonline/lender-borrower-monitor.git
-   cd lender-borrower-monitor
+   git clone https://github.com/johnnyonline/yDegen.git
+   cd yDegen
    ```
 
 2. **Set up virtual environment**
