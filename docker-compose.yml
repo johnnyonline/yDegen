@@ -6,12 +6,14 @@ services:
     container_name: eth-lender-borrower-monitor
     volumes:
       - .:/app
+      - /app/.venv  # anonymous volume to prevent host .venv from leaking in
     working_dir: /app
     command: >
-      sh -c "
+      bash -c "
       uv venv &&
       . .venv/bin/activate &&
       uv sync &&
+      export $(grep -v '^#' .env | xargs) &&
       silverback run src.bot:bot --network :mainnet
       "
     restart: unless-stopped
