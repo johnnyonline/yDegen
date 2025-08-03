@@ -1,9 +1,9 @@
 services:
-  eth-lender-borrower-monitor:
+  eth-ydegen:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: eth-lender-borrower-monitor
+    container_name: eth-ydegen
     volumes:
       - .:/app
       - /app/.venv  # anonymous volume to prevent host .venv from leaking in
