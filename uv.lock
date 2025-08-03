@@ -124,6 +124,21 @@ wheels = [
 ]
 
 [[package]]
+name = "ape-etherscan"
+version = "0.8.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "eth-ape" },
+    { name = "ethpm-types" },
+    { name = "requests" },
+    { name = "yarl" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/44/59/6682c72e60217ea5e031f5525babe2046e8e477c6345a63757f516503cec/ape_etherscan-0.8.4.tar.gz", hash = "sha256:39f17738a32a1199fdf10fed0b5d7794a93aca4670c1c9256e8698f66c6ee9b9", size = 105862, upload-time = "2024-12-02T18:44:01.059Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/81/99/b3940db2799714e507b76fbc7976523426d0095cf0d3cdd9108bff984a2f/ape_etherscan-0.8.4-py3-none-any.whl", hash = "sha256:23358309badd10e71754473de7244becdd066b2239bc2c6640516a6e0a4907a8", size = 27485, upload-time = "2024-12-02T18:43:59.029Z" },
+]
+
+[[package]]
 name = "apepay"
 version = "0.3.9"
 source = { registry = "https://pypi.org/simple" }
@@ -472,7 +487,7 @@ name = "cytoolz"
 version = "1.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "toolz" },
+    { name = "toolz", marker = "implementation_name == 'cpython'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a7/f9/3243eed3a6545c2a33a21f74f655e3fcb5d2192613cd3db81a93369eb339/cytoolz-1.0.1.tar.gz", hash = "sha256:89cc3161b89e1bb3ed7636f74ed2e55984fd35516904fc878cae216e42b2c7d6", size = 626652, upload-time = "2024-12-13T05:47:36.672Z" }
 wheels = [
@@ -1150,6 +1165,7 @@ name = "lender-borrower-monitor"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "ape-etherscan" },
     { name = "eth-ape" },
     { name = "mypy" },
     { name = "python-dotenv" },
@@ -1160,6 +1176,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ape-etherscan", specifier = "==0.8.4" },
     { name = "eth-ape", specifier = "==0.8.36" },
     { name = "mypy", specifier = "==1.15.0" },
     { name = "python-dotenv", specifier = "==1.1.0" },

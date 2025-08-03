@@ -6,6 +6,7 @@ from ape.api import BlockAPI
 from silverback import SilverbackBot, StateSnapshot
 from taskiq import Context, TaskiqDepends
 
+from src.strategies import all_strategies
 from src.tg import notify_group_chat
 
 bot = SilverbackBot()
@@ -38,6 +39,13 @@ async def exec_block(
     start = time.time()
     msg = f"📦 New block: <b>{block.number}</b>"
     await notify_group_chat(msg)
+
+    strats = all_strategies()
+    print(f"Found {strats}")
+
+    for strat in strats:
+        await notify_group_chat(f"Strategy {strat.asset()}!")
+
     elapsed = time.time() - start
     return {"block_processing_time": elapsed}
 

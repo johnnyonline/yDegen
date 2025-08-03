@@ -64,7 +64,7 @@ ruff check --fix .
 
 Type checking with mypy:
 ```bash
-mypy .
+mypy src
 ```
 
 ## Add a new Strategy

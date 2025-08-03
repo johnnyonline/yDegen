@@ -11,6 +11,7 @@ dependencies = [
     "python-telegram-bot==22.0",
     "eth-ape==0.8.36",
     "silverback==0.7.27",
+    "ape-etherscan==0.8.4",
 ]
 
 [tool.ruff]
@@ -26,6 +27,7 @@ quote-style = "double"
 docstring-code-format = true
 
 [tool.mypy]
+mypy_path = "src"
 python_version = "3.11"
 ignore_missing_imports = true
 strict = true

@@ -2,8 +2,13 @@ import os
 
 from telegram import Bot
 
-BOT_ACCESS_TOKEN = os.getenv("BOT_ACCESS_TOKEN")
-GROUP_CHAT_ID = os.getenv("GROUP_CHAT_ID")
+BOT_ACCESS_TOKEN = os.getenv("BOT_ACCESS_TOKEN", "")
+if BOT_ACCESS_TOKEN == "":
+    raise RuntimeError("!BOT_ACCESS_TOKEN")
+
+GROUP_CHAT_ID = int(os.getenv("GROUP_CHAT_ID", "0"))
+if GROUP_CHAT_ID == 0:
+    raise RuntimeError("!GROUP_CHAT_ID")
 
 
 async def notify_group_chat(
