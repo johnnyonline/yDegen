@@ -54,7 +54,7 @@ async def check_tend_triggers(
 @bot.on_(eth_oracle().AnswerUpdated)
 async def on_eth_price_update(event) -> None:  # type: ignore
     # Notify about ETH price update
-    msg = f"🦍 <b>ETH price updated</b>\n\n<b>Price:</b> {(event.current / 1e8)} USD"
+    msg = f"{random.choice(EMOJIS)} <b>ETH price updated</b>\n\n<b>Price:</b> {int(event.current / 1e8)} USD"
     await notify_group_chat(msg)
 
     # Notify about each strategy's status

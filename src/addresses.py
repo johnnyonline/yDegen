@@ -4,6 +4,7 @@ from ape import Contract
 from ape.contracts.base import ContractInstance
 
 EMOJIS = [
+    "🦍",
     "🐒",
     "🦧",
     "🐶",
