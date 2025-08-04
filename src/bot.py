@@ -64,12 +64,16 @@ async def on_eth_price_update(event) -> None:  # type: ignore
         liquidation_threshold = strategy.getLiquidateCollateralFactor() / 1e16
         target_ltv = liquidation_threshold * strategy.targetLTVMultiplier() / 1e4
         warning_ltv = liquidation_threshold * strategy.warningLTVMultiplier() / 1e4
+        borrow_apr = strategy.getNetBorrowApr(0) / 1e16
+        reward_apr = strategy.getNetRewardApr(0) / 1e16
         msg = (
             f"{random.choice(EMOJIS)} <b>{name}</b>\n\n"
-            f"<b>LTV:</b> {ltv}%\n"
-            f"<b>Target:</b> {target_ltv}%\n"
-            f"<b>Warning:</b> {warning_ltv}%\n"
-            f"<b>Liquidation:</b> {liquidation_threshold}%\n\n"
+            f"<b>LTV:</b> {ltv:.1f}%\n"
+            f"<b>Target:</b> {target_ltv:.1f}%\n"
+            f"<b>Warning:</b> {warning_ltv:.1f}%\n"
+            f"<b>Liquidation:</b> {liquidation_threshold:.1f}%\n"
+            f"<b>Borrow APR:</b> {borrow_apr:.2f}%\n"
+            f"<b>Reward APR:</b> {reward_apr:.2f}%\n\n"
             f"<a href='https://etherscan.io/address/{strategy.address}'>🔗 View Strategy</a>"
         )
 

@@ -1161,31 +1161,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b3/15/c9f68c4f477fbaa9fc5ea5e271547956da321787cf7aef79d6971dcb4c84/lazyasd-0.1.4.tar.gz", hash = "sha256:a3196f05cff27f952ad05767e5735fd564b4ea4e89b23f5ea1887229c3db145b", size = 8380, upload-time = "2018-03-21T19:06:33.112Z" }
 
 [[package]]
-name = "lender-borrower-monitor"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "ape-etherscan" },
-    { name = "eth-ape" },
-    { name = "mypy" },
-    { name = "python-dotenv" },
-    { name = "python-telegram-bot" },
-    { name = "ruff" },
-    { name = "silverback" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "ape-etherscan", specifier = "==0.8.4" },
-    { name = "eth-ape", specifier = "==0.8.36" },
-    { name = "mypy", specifier = "==1.15.0" },
-    { name = "python-dotenv", specifier = "==1.1.0" },
-    { name = "python-telegram-bot", specifier = "==22.0" },
-    { name = "ruff", specifier = "==0.11.5" },
-    { name = "silverback", specifier = "==0.7.27" },
-]
-
-[[package]]
 name = "lru-dict"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2643,6 +2618,31 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/07/3c/70df5034e6712fcc238b76f6afd1871de143a2a124d80ae2c377cde180f3/yaspin-3.1.0.tar.gz", hash = "sha256:7b97c7e257ec598f98cef9878e038bfa619ceb54ac31d61d8ead2b3128f8d7c7", size = 36791, upload-time = "2024-09-22T17:07:09.376Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/89/78/fa25b385d9f2c406719b5cf574a0980f5ccc6ea1f8411d56249f44acd3c2/yaspin-3.1.0-py3-none-any.whl", hash = "sha256:5e3d4dfb547d942cae6565718123f1ecfa93e745b7e51871ad2bbae839e71b73", size = 18629, upload-time = "2024-09-22T17:07:06.923Z" },
+]
+
+[[package]]
+name = "ydegen"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "ape-etherscan" },
+    { name = "eth-ape" },
+    { name = "mypy" },
+    { name = "python-dotenv" },
+    { name = "python-telegram-bot" },
+    { name = "ruff" },
+    { name = "silverback" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ape-etherscan", specifier = "==0.8.4" },
+    { name = "eth-ape", specifier = "==0.8.36" },
+    { name = "mypy", specifier = "==1.15.0" },
+    { name = "python-dotenv", specifier = "==1.1.0" },
+    { name = "python-telegram-bot", specifier = "==22.0" },
+    { name = "ruff", specifier = "==0.11.5" },
+    { name = "silverback", specifier = "==0.7.27" },
 ]
 
 [[package]]
