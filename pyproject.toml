@@ -3,7 +3,7 @@ name = "ydegen"
 version = "0.1.0"
 description = "Real-time monitoring of Yearn’s riskier strategies, usually involving leverage"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "ruff==0.11.5",
     "mypy==1.15.0",
@@ -28,7 +28,7 @@ docstring-code-format = true
 
 [tool.mypy]
 mypy_path = "src"
-python_version = "3.11"
+python_version = "3.12"
 ignore_missing_imports = true
 strict = true
 check_untyped_defs = true
