@@ -6,6 +6,7 @@ on:
 
 jobs:
   build:
+    if: false  # never runs. remove this line to re-enable build once base image supports Python >=3.12
     name: Build without pushing
     runs-on: ubuntu-latest
     permissions:
