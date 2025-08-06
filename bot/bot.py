@@ -8,8 +8,8 @@ from ape_ethereum import multicall
 from silverback import SilverbackBot, StateSnapshot
 from taskiq import Context, TaskiqDepends
 
-from src.addresses import EMOJIS, eth_oracle, strategies
-from src.tg import ERROR_GROUP_CHAT_ID, notify_group_chat
+from bot.addresses import EMOJIS, eth_oracle, strategies
+from bot.tg import ERROR_GROUP_CHAT_ID, notify_group_chat
 
 bot = SilverbackBot()
 

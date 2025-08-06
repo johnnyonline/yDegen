@@ -35,7 +35,7 @@
 
 Run:
 ```shell
-silverback run src.bot:bot --network :mainnet
+silverback run --network :mainnet
 ```
 
 Run using docker compose:
@@ -64,5 +64,5 @@ ruff check --fix .
 
 Type checking with mypy:
 ```bash
-mypy src
+mypy bot
 ```
