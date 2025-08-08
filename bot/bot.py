@@ -1,4 +1,5 @@
 import itertools
+import os
 import random
 from typing import Annotated
 
@@ -11,7 +12,18 @@ from taskiq import Context, TaskiqDepends
 from bot.addresses import EMOJIS, eth_oracle, strategies
 from bot.tg import ERROR_GROUP_CHAT_ID, notify_group_chat
 
+# =============================================================================
+# Bot Configuration & Constants
+# =============================================================================
+
+
 bot = SilverbackBot()
+
+# Cooldown in blocks for tendTrigger alerts
+TEND_TRIGGER_ALERT_COOLDOWN_BLOCKS = int(
+    os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_BLOCKS", "60")
+)
+
 
 # =============================================================================
 # Startup / Shutdown
@@ -23,6 +35,12 @@ async def bot_startup(startup_state: StateSnapshot) -> None:
     await notify_group_chat(
         "🟢 <b>yDegen bot started successfully!</b>", chat_id=ERROR_GROUP_CHAT_ID
     )
+
+    # Ensure persisted dict exists
+    if not hasattr(bot.state, "tend_alerts") or not isinstance(
+        getattr(bot.state, "tend_alerts"), dict
+    ):
+        bot.state.tend_alerts = {}
 
 
 @bot.on_shutdown()
@@ -45,12 +63,16 @@ async def check_tend_triggers(
     for strategy in strategies():
         needs_tend, _ = strategy.tendTrigger()
         if needs_tend:
-            await notify_group_chat(
-                f"🚨 <b>Strategy needs tending!</b>\n\n"
-                f"<b>Name:</b> {strategy.name()}\n"
-                f"<b>Block Number:</b> {block.number}\n\n"
-                f"<a href='https://etherscan.io/address/{strategy.address}'>🔗 View Strategy</a>"
-            )
+            block_number = block.number
+            last_block_notified = bot.state.tend_alerts.get(strategy.address, 0)
+            if block_number - last_block_notified >= TEND_TRIGGER_ALERT_COOLDOWN_BLOCKS:
+                await notify_group_chat(
+                    f"🚨 <b>Strategy needs tending!</b>\n\n"
+                    f"<b>Name:</b> {strategy.name()}\n"
+                    f"<b>Block Number:</b> {block_number}\n\n"
+                    f"<a href='https://etherscan.io/address/{strategy.address}'>🔗 View Strategy</a>"
+                )
+                bot.state.tend_alerts[strategy.address] = block_number
 
 
 @bot.on_(eth_oracle().AnswerUpdated)
