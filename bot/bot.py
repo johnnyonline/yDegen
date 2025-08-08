@@ -36,11 +36,8 @@ async def bot_startup(startup_state: StateSnapshot) -> None:
         "🟢 <b>yDegen bot started successfully!</b>", chat_id=ERROR_GROUP_CHAT_ID
     )
 
-    # Ensure persisted dict exists
-    if not hasattr(bot.state, "tend_alerts") or not isinstance(
-        getattr(bot.state, "tend_alerts"), dict
-    ):
-        bot.state.tend_alerts = {}
+    # Set `bot.state` values
+    bot.state.tend_alerts = {}
 
 
 @bot.on_shutdown()
@@ -65,6 +62,7 @@ async def check_tend_triggers(
         if needs_tend:
             block_number = block.number
             last_block_notified = bot.state.tend_alerts.get(strategy.address, 0)
+            print(f"last_block_notified: {last_block_notified}")
             if block_number - last_block_notified >= TEND_TRIGGER_ALERT_COOLDOWN_BLOCKS:
                 await notify_group_chat(
                     f"🚨 <b>Strategy needs tending!</b>\n\n"
