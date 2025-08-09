@@ -20,6 +20,7 @@ from bot.tg import ERROR_GROUP_CHAT_ID, notify_group_chat
 bot = SilverbackBot()
 
 TEND_TRIGGER_ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "300"))  # 5 min default
+PRICE_UPDATE_MIN_INTERVAL_SECONDS = int(os.getenv("PRICE_UPDATE_MIN_INTERVAL_SECONDS", "3600"))  # 1 hour default
 
 
 # =============================================================================
@@ -36,6 +37,7 @@ async def bot_startup(startup_state: StateSnapshot) -> None:
 
     # Set `bot.state` values
     bot.state.tend_alerts_ts = {}
+    bot.state.last_price_update_ts = 0
 
 
 @bot.on_shutdown()
@@ -94,6 +96,12 @@ async def check_tend_triggers(block: BlockAPI, context: Annotated[Context, Taski
 
 @bot.on_(oracle().AnswerUpdated)
 async def on_price_update(event) -> None:  # type: ignore
+    # Throttle: process at most once per `PRICE_UPDATE_MIN_INTERVAL_SECONDS`
+    now_ts = int(chain.blocks.head.timestamp)
+    last_ts = bot.state.last_price_update_ts
+    if now_ts - last_ts < PRICE_UPDATE_MIN_INTERVAL_SECONDS:
+        return
+
     # Prepare multicall for all strategy data
     current_strategies = list(strategies())
     call = multicall.Call()
@@ -137,3 +145,6 @@ async def on_price_update(event) -> None:  # type: ignore
         )
 
         await notify_group_chat(msg)
+
+    # Record the time we last processed a price update
+    bot.state.last_price_update_ts = now_ts
