@@ -1,19 +1,30 @@
 services:
   eth-ydegen:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     container_name: eth-ydegen
-    volumes:
-      - .:/app
-      - /app/.venv  # anonymous volume to prevent host .venv from leaking in
+    volumes: [".:/app", "/app/.venv"]
     working_dir: /app
     command: >
       bash -c "
-      uv venv &&
+      uv venv --clear &&
       . .venv/bin/activate &&
       uv sync &&
       export $(grep -v '^#' .env | xargs) &&
       silverback run --network :mainnet
+      "
+    restart: unless-stopped
+
+  base-ydegen:
+    build: .
+    container_name: base-ydegen
+    volumes: [".:/app", "/app/.venv"]
+    working_dir: /app
+    command: >
+      bash -c "
+      uv venv --clear &&
+      . .venv/bin/activate &&
+      uv sync &&
+      export $(grep -v '^#' .env | xargs) &&
+      silverback run --network base:mainnet
       "
     restart: unless-stopped
