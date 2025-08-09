@@ -9,7 +9,7 @@ from ape_ethereum import multicall
 from silverback import SilverbackBot, StateSnapshot
 from taskiq import Context, TaskiqDepends
 
-from bot.config import EMOJIS, chain_key, explorer_base_url, oracle, strategies
+from bot.config import EMOJIS, apr_oracle_for, chain_key, explorer_base_url, oracle, strategies
 from bot.tg import ERROR_GROUP_CHAT_ID, notify_group_chat
 
 # =============================================================================
@@ -119,6 +119,15 @@ async def on_price_update(event) -> None:  # type: ignore
         borrow_apr,
         reward_apr,
     ) in zip(current_strategies, itertools.batched(results, n=7)):
+        apr_oracle = apr_oracle_for(strategy.address)
+        if apr_oracle is None:
+            if borrow_apr >= reward_apr:
+                expected_apr = 0
+            else:
+                expected_apr = (reward_apr - borrow_apr) * raw_current_ltv / 1e18
+        else:
+            expected_apr = apr_oracle.aprAfterDebtChange(strategy.address, 0)
+
         liquidation_threshold = collateral_factor / 1e16
         msg = (
             f"{random.choice(EMOJIS)} <b>{name}</b>\n\n"
@@ -126,8 +135,7 @@ async def on_price_update(event) -> None:  # type: ignore
             f"<b>Target:</b> {liquidation_threshold * target_ltv_mult / 1e4:.1f}%\n"
             f"<b>Warning:</b> {liquidation_threshold * warning_ltv_mult / 1e4:.1f}%\n"
             f"<b>Liquidation:</b> {liquidation_threshold:.1f}%\n"
-            f"<b>Borrow APR:</b> {borrow_apr / 1e16:.2f}%\n"
-            f"<b>Reward APR:</b> {reward_apr / 1e16:.2f}%\n\n"
+            f"<b>Expected APR:</b> {expected_apr / 1e16:.2f}%\n\n"
             f"<a href='{explorer_base_url()}{strategy.address}'>🔗 View Strategy</a>"
         )
 
