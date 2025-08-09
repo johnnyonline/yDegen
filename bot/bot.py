@@ -120,14 +120,11 @@ async def on_price_update(event) -> None:  # type: ignore
         reward_apr,
     ) in zip(current_strategies, itertools.batched(results, n=7)):
         apr_oracle = apr_oracle_for(strategy.address)
-        if apr_oracle is None:
-            if borrow_apr >= reward_apr:
-                expected_apr = 0
-            else:
-                expected_apr = (reward_apr - borrow_apr) * raw_current_ltv / 1e18
-        else:
-            expected_apr = apr_oracle.aprAfterDebtChange(strategy.address, 0)
-
+        expected_apr = (
+            apr_oracle.aprAfterDebtChange(strategy.address, 0)
+            if apr_oracle
+            else max(0, reward_apr - borrow_apr) * raw_current_ltv / 10**18
+        )
         liquidation_threshold = collateral_factor / 1e16
         msg = (
             f"{random.choice(EMOJIS)} <b>{name}</b>\n\n"
