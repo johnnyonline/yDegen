@@ -9,7 +9,7 @@ from ape_ethereum import multicall
 from silverback import SilverbackBot, StateSnapshot
 from taskiq import Context, TaskiqDepends
 
-from bot.config import EMOJIS, apr_oracle_for, chain_key, explorer_base_url, oracle, strategies
+from bot.config import EMOJIS, apr_oracle, chain_key, explorer_base_url, oracle, strategies
 from bot.tg import ERROR_GROUP_CHAT_ID, notify_group_chat
 
 # =============================================================================
@@ -111,28 +111,18 @@ async def on_price_update(event) -> None:  # type: ignore
         call.add(strategy.getLiquidateCollateralFactor)
         call.add(strategy.targetLTVMultiplier)
         call.add(strategy.warningLTVMultiplier)
-        call.add(strategy.getNetBorrowApr, 0)
-        call.add(strategy.getNetRewardApr, 0)
 
     # Execute the multicall
     results = call()
 
-    # Process results in batches of 7 per strategy
+    # Process results in batches of 5 per strategy
     for strategy, (
         name,
         raw_current_ltv,
         collateral_factor,
         target_ltv_mult,
         warning_ltv_mult,
-        borrow_apr,
-        reward_apr,
-    ) in zip(current_strategies, itertools.batched(results, n=7)):
-        apr_oracle = apr_oracle_for(strategy.address)
-        expected_apr = (
-            apr_oracle.aprAfterDebtChange(strategy.address, 0)
-            if apr_oracle
-            else max(0, reward_apr - borrow_apr) * raw_current_ltv / 10**18
-        )
+    ) in zip(current_strategies, itertools.batched(results, n=5)):
         liquidation_threshold = collateral_factor / 1e16
         msg = (
             f"{random.choice(EMOJIS)} <b>{name}</b>\n\n"
@@ -140,7 +130,7 @@ async def on_price_update(event) -> None:  # type: ignore
             f"<b>Target:</b> {liquidation_threshold * target_ltv_mult / 1e4:.1f}%\n"
             f"<b>Warning:</b> {liquidation_threshold * warning_ltv_mult / 1e4:.1f}%\n"
             f"<b>Liquidation:</b> {liquidation_threshold:.1f}%\n"
-            f"<b>Expected APR:</b> {expected_apr / 1e16:.2f}%\n\n"
+            f"<b>Expected APR:</b> {int(apr_oracle().getStrategyApr(strategy.address, 0)) / 1e16:.2f}%\n\n"
             f"<a href='{explorer_base_url()}{strategy.address}'>🔗 View Strategy</a>"
         )
 
