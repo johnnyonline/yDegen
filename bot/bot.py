@@ -1,6 +1,7 @@
 import itertools
 import os
 import random
+from datetime import datetime
 from typing import Annotated
 
 from ape import chain
@@ -9,7 +10,7 @@ from ape_ethereum import multicall
 from silverback import SilverbackBot, StateSnapshot
 from taskiq import Context, TaskiqDepends
 
-from bot.config import EMOJIS, apr_oracle, chain_key, explorer_base_url, oracle, strategies
+from bot.config import EMOJIS, apr_oracle, chain_key, explorer_base_url, strategies
 from bot.tg import ERROR_GROUP_CHAT_ID, notify_group_chat
 
 # =============================================================================
@@ -19,8 +20,9 @@ from bot.tg import ERROR_GROUP_CHAT_ID, notify_group_chat
 
 bot = SilverbackBot()
 
-TEND_TRIGGER_ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "300"))  # 5 min default
-PRICE_UPDATE_MIN_INTERVAL_SECONDS = int(os.getenv("PRICE_UPDATE_MIN_INTERVAL_SECONDS", "3600"))  # 1 hour default
+# STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "0 8 * * *")  # Daily at 8 AM UTC
+STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "* * * * *")  # Every minute
+ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "600"))  # 10 min default
 
 
 # =============================================================================
@@ -37,7 +39,7 @@ async def bot_startup(startup_state: StateSnapshot) -> None:
 
     # Set `bot.state` values
     bot.state.tend_alerts_ts = {}
-    bot.state.last_price_update_ts = 0
+    bot.state.apr_zero_alert_ts = {}
 
 
 @bot.on_shutdown()
@@ -56,9 +58,9 @@ async def bot_shutdown() -> None:
 @bot.on_(chain.blocks)
 async def check_tend_triggers(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]) -> None:
     # Only run every 5th block if not mainnet
-    if not (chain_key() == "ethereum"):
-        if block.number % 5 != 0:
-            return
+    chain = chain_key()
+    if chain != "ethereum" and (block.number % 5 != 0):
+        return
 
     # Prepare multicall for all strategy data
     current_strategies = list(strategies())
@@ -80,28 +82,78 @@ async def check_tend_triggers(block: BlockAPI, context: Annotated[Context, Taski
 
         # Check cooldown
         last_ts = bot.state.tend_alerts_ts.get(strategy.address, 0)
-        if now_ts - last_ts < TEND_TRIGGER_ALERT_COOLDOWN_SECONDS:
+        if now_ts - last_ts < ALERT_COOLDOWN_SECONDS:
             continue
 
         await notify_group_chat(
             f"🚨 <b>Strategy needs tending!</b>\n\n"
             f"<b>Name:</b> {strategy.name()}\n"
+            f"<b>Network:</b> {chain.capitalize()}\n"
             f"<b>Block Number:</b> {block_number}\n\n"
-            f"<a href='{explorer_base_url()}{strategy.address}'>🔗 View Strategy</a>\n\n"
+            f"<i>Sleeping for {int(ALERT_COOLDOWN_SECONDS / 60)} minutes...</i>\n\n"
+            f"<a href='{explorer_base_url()}{strategy.address}'>🔗 View Strategy</a>"
         )
 
         # Update the timestamp in state
         bot.state.tend_alerts_ts[strategy.address] = now_ts
 
 
-@bot.on_(oracle().AnswerUpdated)
-async def on_price_update(event) -> None:  # type: ignore
-    # Throttle: process at most once per `PRICE_UPDATE_MIN_INTERVAL_SECONDS`
-    now_ts = int(chain.blocks.head.timestamp)
-    last_ts = bot.state.last_price_update_ts
-    if now_ts - last_ts < PRICE_UPDATE_MIN_INTERVAL_SECONDS:
+@bot.on_(chain.blocks)
+async def check_still_profitable(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]) -> None:
+    # Only run every 5th block if not Ethereum mainnet
+    chain = chain_key()
+    if chain != "ethereum" and (block.number % 5 != 0):
         return
 
+    # Cache the APR oracle instance
+    oracle = apr_oracle()
+
+    # Prepare multicall for all strategy data
+    current_strategies = list(strategies())
+    call = multicall.Call()
+    for strategy in current_strategies:
+        call.add(strategy.totalAssets)
+        call.add(oracle.getStrategyApr, strategy.address, 0)
+
+    # Execute the multicall
+    results = call()
+
+    # Cache timestamp
+    now_ts = block.timestamp
+
+    # Check if any strategy is not profitable and notify if needed
+    for strategy, (total_assets, apr) in zip(current_strategies, itertools.batched(results, n=2)):
+        if total_assets == 0:
+            continue  # No assets
+
+        if apr > 0:
+            continue  # All good
+
+        # Check cooldown
+        last_ts = bot.state.apr_zero_alert_ts.get(strategy.address, 0)
+        if now_ts - last_ts < ALERT_COOLDOWN_SECONDS:
+            continue
+
+        await notify_group_chat(
+            f"🚨 <b>Expected APR is zero!</b>\n\n"
+            f"<b>Name:</b> {strategy.name()}\n"
+            f"<b>Network:</b> {chain.capitalize()}\n"
+            f"<b>Block Number:</b> {block.number}\n\n"
+            f"<i>Sleeping for {int(ALERT_COOLDOWN_SECONDS / 60)} minutes...</i>\n\n"
+            f"<a href='{explorer_base_url()}{strategy.address}'>🔗 View Strategy</a>"
+        )
+
+        # Update the timestamp in state
+        bot.state.apr_zero_alert_ts[strategy.address] = now_ts
+
+
+# =============================================================================
+# Cron Jobs
+# =============================================================================
+
+
+@bot.cron(STATUS_REPORT_CRON)
+async def report_status(time: datetime) -> None:
     # Prepare multicall for all strategy data
     current_strategies = list(strategies())
     call = multicall.Call()
@@ -135,6 +187,3 @@ async def on_price_update(event) -> None:  # type: ignore
         )
 
         await notify_group_chat(msg)
-
-    # Record the time we last processed a price update
-    bot.state.last_price_update_ts = now_ts
