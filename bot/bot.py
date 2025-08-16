@@ -21,7 +21,7 @@ from bot.tg import ERROR_GROUP_CHAT_ID, notify_group_chat
 bot = SilverbackBot()
 
 STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "0 8 * * *")  # Daily at 8 AM UTC
-ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "600"))  # 10 min default
+ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "3600"))  # 1 hour default
 
 
 # =============================================================================
