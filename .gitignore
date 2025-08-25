@@ -46,6 +46,7 @@ cache-id.txt
 *.cache
 .uv/
 .ruff_cache
+bot_state.json
 
 # Ape stuff
 .build/

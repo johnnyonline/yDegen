@@ -1,8 +1,9 @@
 import itertools
+import json
 import os
 import random
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any, Dict, cast
 
 from ape import chain
 from ape.api import BlockAPI
@@ -20,6 +21,8 @@ from bot.tg import ERROR_GROUP_CHAT_ID, notify_group_chat
 
 bot = SilverbackBot()
 
+STATE_FILE = "bot_state.json"
+
 STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "0 8 * * *")  # Daily at 8 AM UTC
 ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "3600"))  # 1 hour default
 
@@ -35,10 +38,6 @@ async def bot_startup(startup_state: StateSnapshot) -> None:
         f"🟢 <b>{chain_key()} yDegen bot started successfully</b>",
         chat_id=ERROR_GROUP_CHAT_ID,
     )
-
-    # Set `bot.state` values
-    bot.state.tend_alerts_ts = {}
-    bot.state.apr_zero_alert_ts = {}
 
 
 @bot.on_shutdown()
@@ -80,7 +79,8 @@ async def check_tend_triggers(block: BlockAPI, context: Annotated[Context, Taski
             continue
 
         # Check cooldown
-        last_ts = bot.state.tend_alerts_ts.get(strategy.address, 0)
+        state = load_state()
+        last_ts = state.get("tend_alerts_ts", {}).get(strategy.address, 0)
         if now_ts - last_ts < ALERT_COOLDOWN_SECONDS:
             continue
 
@@ -94,7 +94,8 @@ async def check_tend_triggers(block: BlockAPI, context: Annotated[Context, Taski
         )
 
         # Update the timestamp in state
-        bot.state.tend_alerts_ts[strategy.address] = now_ts
+        state.setdefault("tend_alerts_ts", {})[strategy.address] = now_ts
+        save_state(state)
 
 
 @bot.on_(chain.blocks)
@@ -129,7 +130,8 @@ async def check_still_profitable(block: BlockAPI, context: Annotated[Context, Ta
             continue  # All good
 
         # Check cooldown
-        last_ts = bot.state.apr_zero_alert_ts.get(strategy.address, 0)
+        state = load_state()
+        last_ts = state.get("apr_zero_alert_ts", {}).get(strategy.address, 0)
         if now_ts - last_ts < ALERT_COOLDOWN_SECONDS:
             continue
 
@@ -143,7 +145,8 @@ async def check_still_profitable(block: BlockAPI, context: Annotated[Context, Ta
         )
 
         # Update the timestamp in state
-        bot.state.apr_zero_alert_ts[strategy.address] = now_ts
+        state.setdefault("apr_zero_alert_ts", {})[strategy.address] = now_ts
+        save_state(state)
 
 
 # =============================================================================
@@ -186,3 +189,21 @@ async def report_status(time: datetime) -> None:
         )
 
         await notify_group_chat(msg)
+
+
+# =============================================================================
+# Helpers
+# =============================================================================
+
+
+def load_state() -> Dict[str, Any]:
+    try:
+        with open(STATE_FILE, "r") as f:
+            return cast(Dict[str, Any], json.load(f))
+    except FileNotFoundError:
+        return {}
+
+
+def save_state(state: Dict[str, Any]) -> None:
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f)
