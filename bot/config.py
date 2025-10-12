@@ -20,7 +20,7 @@ class NetworkCfg(TypedDict):
 NETWORKS: Mapping[str, NetworkCfg] = {
     "ethereum": {
         "strategies": [
-            "0xdb0aEca3fB4337E1a902FA1CeeBe8096f4484b3E",  # Curve WETH Lender crvUSD Borrower
+            # "0xdb0aEca3fB4337E1a902FA1CeeBe8096f4484b3E",  # Curve WETH Lender crvUSD Borrower
         ],
         "explorer": "https://etherscan.io/address/",
     },

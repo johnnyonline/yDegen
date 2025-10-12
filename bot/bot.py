@@ -23,7 +23,8 @@ bot = SilverbackBot()
 
 STATE_FILE = "bot_state.json"
 
-STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "0 8 * * *")  # Daily at 8 AM UTC
+# STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "0 8 * * *")  # Daily at 8 AM UTC
+STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "* * * * *")  # Every minute
 ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "86400"))  # 24 hours default
 
 
@@ -60,8 +61,12 @@ async def check_tend_triggers(block: BlockAPI, context: Annotated[Context, Taski
     if chain != "ethereum" and (block.number % 5 != 0):
         return
 
-    # Prepare multicall for all strategy data
+    # Get current strategies. Skip if none found
     current_strategies = list(strategies())
+    if not current_strategies:
+        return
+
+    # Prepare multicall for all strategy data
     call = multicall.Call()
     for strategy in current_strategies:
         call.add(strategy.tendTrigger)
@@ -108,8 +113,12 @@ async def check_still_profitable(block: BlockAPI, context: Annotated[Context, Ta
     # Cache the APR oracle instance
     oracle = apr_oracle()
 
-    # Prepare multicall for all strategy data
+    # Get current strategies. Skip if none found
     current_strategies = list(strategies())
+    if not current_strategies:
+        return
+
+    # Prepare multicall for all strategy data
     call = multicall.Call()
     for strategy in current_strategies:
         call.add(strategy.totalAssets)
@@ -156,8 +165,12 @@ async def check_still_profitable(block: BlockAPI, context: Annotated[Context, Ta
 
 @bot.cron(STATUS_REPORT_CRON)
 async def report_status(time: datetime) -> None:
-    # Prepare multicall for all strategy data
+    # Get current strategies. Skip if none found
     current_strategies = list(strategies())
+    if not current_strategies:
+        return
+
+    # Prepare multicall for all strategy data
     call = multicall.Call()
     for strategy in current_strategies:
         call.add(strategy.name)
