@@ -13,24 +13,36 @@ EMOJIS = [
 
 
 class NetworkCfg(TypedDict):
-    strategies: Sequence[str]
+    lender_borrowers: Sequence[str]
+    ybold: Sequence[str]
     explorer: str
 
 
 NETWORKS: Mapping[str, NetworkCfg] = {
     "ethereum": {
-        "strategies": [
+        "lender_borrowers": [
             # "0xdb0aEca3fB4337E1a902FA1CeeBe8096f4484b3E",  # Curve WETH Lender crvUSD Borrower
+        ],
+        "ybold": [
+            "0x2048A730f564246411415f719198d6f7c10A7961",  # yBOLD's WETH Strategy
+            "0x46af61661B1e15DA5bFE40756495b7881F426214",  # yBOLD's wstETH Strategy
+            "0x2351E217269A4a53a392bffE8195Efa1c502A1D2",  # yBOLD's rETH Strategy
+            "0xad7D5D31Ffcb96f6F719Bb78209019d3d09e6baa",  # sUSDaf's ysyBOLD Strategy
+            "0xF6516d45A1625a6d9d3479902a5CB4c8B79F1887",  # sUSDaf's sUSDS Strategy
+            "0x388095a341Bf5767d3d3B7093cd89A82B816B507",  # sUSDaf's sfrxETH Strategy
+            "0xb00a77045574f42b9Aff25dB275af4d5d25146bb",  # sUSDaf's tBTC Strategy
+            "0x1d53B127629AF8df7da5488833a50c2F12692F5C",  # sUSDaf's WBTC18 Strategy
         ],
         "explorer": "https://etherscan.io/address/",
     },
     "base": {
-        "strategies": [
+        "lender_borrowers": [
             "0xfdB431E661372fA1146efB70bf120ECDed944a78",  # Moonwell USDC Lender WETH Borrower
             "0x945Df73d55557Ea23c0c35CD350d8DE3b745287E",  # Moonwell USDC Lender cbBTC Borrower
             "0x03c5AfF0cd5e40889d689fD9D9Caff286b1BD7Fb",  # Moonwell cbBTC Lender WETH Borrower
             "0xd89A4f020C8d256a2A4B0dC40B36Ee0b27680776",  # Moonwell cbETH Lender WETH Borrower
         ],
+        "ybold": [],
         "explorer": "https://basescan.org/address/",
     },
 }
@@ -50,8 +62,16 @@ def cfg() -> NetworkCfg:
     return NETWORKS.get(chain_key(), NETWORKS["ethereum"])
 
 
+def lender_borrower_strategies() -> list[ContractInstance]:
+    return [Contract(addr) for addr in cfg()["lender_borrowers"]]
+
+
+def ybold_strategies() -> list[ContractInstance]:
+    return [Contract(addr) for addr in cfg()["ybold"]]
+
+
 def strategies() -> list[ContractInstance]:
-    return [Contract(addr) for addr in cfg()["strategies"]]
+    return lender_borrower_strategies() + ybold_strategies()
 
 
 def explorer_base_url() -> str:

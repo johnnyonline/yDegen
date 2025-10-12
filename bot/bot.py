@@ -11,7 +11,7 @@ from ape_ethereum import multicall
 from silverback import SilverbackBot, StateSnapshot
 from taskiq import Context, TaskiqDepends
 
-from bot.config import EMOJIS, apr_oracle, chain_key, explorer_base_url, strategies
+from bot.config import EMOJIS, apr_oracle, chain_key, explorer_base_url, lender_borrower_strategies, strategies
 from bot.tg import ERROR_GROUP_CHAT_ID, notify_group_chat
 
 # =============================================================================
@@ -113,8 +113,8 @@ async def check_still_profitable(block: BlockAPI, context: Annotated[Context, Ta
     # Cache the APR oracle instance
     oracle = apr_oracle()
 
-    # Get current strategies. Skip if none found
-    current_strategies = list(strategies())
+    # Get current lender borrower strategies. Skip if none found
+    current_strategies = list(lender_borrower_strategies())
     if not current_strategies:
         return
 
@@ -165,8 +165,8 @@ async def check_still_profitable(block: BlockAPI, context: Annotated[Context, Ta
 
 @bot.cron(STATUS_REPORT_CRON)
 async def report_status(time: datetime) -> None:
-    # Get current strategies. Skip if none found
-    current_strategies = list(strategies())
+    # Get current lender borrower strategies. Skip if none found
+    current_strategies = list(lender_borrower_strategies())
     if not current_strategies:
         return
 
