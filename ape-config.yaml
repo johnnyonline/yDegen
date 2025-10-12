@@ -8,3 +8,8 @@ node:
     mainnet:
       uri: "${BASE_RPC_URL}"
       ws_uri: "${BASE_WS_URL}"
+  
+  arbitrum:
+    mainnet:
+      uri: "${ARB_RPC_URL}"
+      ws_uri: "${ARB_WS_URL}"

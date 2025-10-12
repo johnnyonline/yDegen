@@ -56,9 +56,9 @@ async def bot_shutdown() -> None:
 
 @bot.on_(chain.blocks)
 async def check_tend_triggers(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]) -> None:
-    # Only run every 5th block if not mainnet
+    # Only run every 100th block if not mainnet
     chain = chain_key()
-    if chain != "ethereum" and (block.number % 5 != 0):
+    if chain != "ethereum" and (block.number % 100 != 0):
         return
 
     # Get current strategies. Skip if none found

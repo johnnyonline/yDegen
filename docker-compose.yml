@@ -29,3 +29,14 @@ services:
         uv sync &&
         silverback run --network base:mainnet
       "
+  
+  arb-ydegen:
+    <<: *common
+    container_name: arb-ydegen
+    command: >
+      bash -lc "
+        uv venv --clear &&
+        . .venv/bin/activate &&
+        uv sync &&
+        silverback run --network arbitrum:mainnet
+      "
