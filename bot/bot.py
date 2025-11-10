@@ -5,7 +5,7 @@ import random
 from datetime import datetime
 from typing import Annotated, Any, Dict, cast
 
-from ape import chain
+from ape import chain, Contract
 from ape.api import BlockAPI
 from ape_ethereum import multicall
 from silverback import SilverbackBot, StateSnapshot
@@ -68,6 +68,7 @@ async def check_tend_triggers(block: BlockAPI, context: Annotated[Context, Taski
     # Prepare multicall for all strategy data
     call = multicall.Call()
     for strategy in current_strategies:
+        strategy = Contract(strategy.address, abi="bot/abis/IBaseStrategy.json")  # Loading ABI manually
         call.add(strategy.tendTrigger)
 
     # Execute the multicall
@@ -87,6 +88,8 @@ async def check_tend_triggers(block: BlockAPI, context: Annotated[Context, Taski
         last_ts = state.get("tend_alerts_ts", {}).get(strategy.address, 0)
         if now_ts - last_ts < ALERT_COOLDOWN_SECONDS:
             continue
+
+        strategy = Contract(strategy.address, abi="bot/abis/ITokenizedStrategy.json")  # Loading ABI manually
 
         await notify_group_chat(
             f"🚨 <b>Strategy needs tending!</b>\n\n"
