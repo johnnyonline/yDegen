@@ -52,3 +52,6 @@ bot_state.json
 .build/
 .silverback-images/
 .silverback-sessions/
+
+# Claude
+.claude/
