@@ -123,6 +123,7 @@ async def check_still_profitable(block: BlockAPI, context: Annotated[Context, Ta
     # Prepare multicall for all strategy data
     call = multicall.Call()
     for strategy in current_strategies:
+        strategy = Contract(strategy.address, abi="bot/abis/ITokenizedStrategy.json")  # Loading ABI manually
         call.add(strategy.totalAssets)
         call.add(oracle.getStrategyApr, strategy.address, 0)
 
@@ -145,6 +146,8 @@ async def check_still_profitable(block: BlockAPI, context: Annotated[Context, Ta
         last_ts = state.get("apr_zero_alert_ts", {}).get(strategy.address, 0)
         if now_ts - last_ts < ALERT_COOLDOWN_SECONDS:
             continue
+
+        strategy = Contract(strategy.address, abi="bot/abis/ITokenizedStrategy.json")  # Loading ABI manually
 
         await notify_group_chat(
             f"🚨 <b>Expected APR is zero!</b>\n\n"
