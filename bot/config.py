@@ -21,7 +21,8 @@ class NetworkCfg(TypedDict):
 NETWORKS: Mapping[str, NetworkCfg] = {
     "ethereum": {
         "lender_borrowers": [
-            # "0xdb0aEca3fB4337E1a902FA1CeeBe8096f4484b3E",  # Curve WETH Lender crvUSD Borrower
+            "0x6dec370EfA894d48D8C55012B0Cd6f3C1C7C4616",  # Asymmetry tBTC Lender USDaf Borrower
+            # "0x6dec370EfA894d48D8C55012B0Cd6f3C1C7C4616",  # Curve WETH Lender crvUSD Borrower
         ],
         "ybold": [
             "0x2048A730f564246411415f719198d6f7c10A7961",  # yBOLD's WETH Strategy
