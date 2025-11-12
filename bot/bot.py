@@ -24,7 +24,7 @@ bot = SilverbackBot()
 STATE_FILE = "bot_state.json"
 
 STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "0 8 * * *")  # Daily at 8 AM UTC
-ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "86400"))  # 24 hours default
+ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "7200"))  # 2 hours default
 
 
 # =============================================================================
@@ -178,6 +178,7 @@ async def report_status(time: datetime) -> None:
     # Prepare multicall for all strategy data
     call = multicall.Call()
     for strategy in current_strategies:
+        strategy = Contract(strategy.address, abi="bot/abis/ILenderBorrower.json")  # Loading ABI manually
         call.add(strategy.name)
         call.add(strategy.getCurrentLTV)
         call.add(strategy.getLiquidateCollateralFactor)
