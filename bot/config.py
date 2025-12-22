@@ -7,7 +7,7 @@ from ape.contracts.base import ContractInstance
 # fmt: off
 EMOJIS = [
     "🦍", "🐒", "🦧", "🐶", "🐱", "🦁", "🐴", "🦄", "🐮",
-    "🐖", "🐑", "🐫", "🦒", "🐇", "🦔", "🐨", "🦦", "🦩", "🦭", "🐢", "🐳", "🐡",
+    "🐑", "🐫", "🦒", "🐇", "🦔", "🐨", "🦦", "🦩", "🦭", "🐢", "🐳", "🐡",
 ]
 # fmt: on
 
@@ -23,6 +23,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "lender_borrowers": [
             "0x6dec370EfA894d48D8C55012B0Cd6f3C1C7C4616",  # Asymmetry tBTC Lender USDaf Borrower
             # "0x6dec370EfA894d48D8C55012B0Cd6f3C1C7C4616",  # Curve WETH Lender crvUSD Borrower
+            "0x38f4F9aAf92bdCACDFe92eD1e025a66E343b05eC",  # Curve wstETH Lender crvUSD Borrower
         ],
         "ybold": [
             "0x2048A730f564246411415f719198d6f7c10A7961",  # yBOLD's WETH Strategy
