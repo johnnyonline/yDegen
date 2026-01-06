@@ -22,7 +22,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
     "ethereum": {
         "lender_borrowers": [
             "0x6dec370EfA894d48D8C55012B0Cd6f3C1C7C4616",  # Asymmetry tBTC Lender USDaf Borrower
-            # "0x6dec370EfA894d48D8C55012B0Cd6f3C1C7C4616",  # Curve WETH Lender crvUSD Borrower
+            "0x48E560AfB1482f63e5e8C0eA7fBdd8Fd82054eC3",  # Curve WETH Lender crvUSD Borrower
             "0x38f4F9aAf92bdCACDFe92eD1e025a66E343b05eC",  # Curve wstETH Lender crvUSD Borrower
         ],
         "ybold": [
