@@ -5,7 +5,7 @@ import random
 from datetime import datetime
 from typing import Annotated, Any, Dict, cast
 
-from ape import chain, Contract
+from ape import Contract, chain
 from ape.api import BlockAPI
 from ape_ethereum import multicall
 from silverback import SilverbackBot, StateSnapshot
@@ -106,7 +106,7 @@ async def check_tend_triggers(block: BlockAPI, context: Annotated[Context, Taski
         save_state(state)
 
 
-@bot.on_(chain.blocks)
+# @bot.on_(chain.blocks)
 async def check_still_profitable(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]) -> None:
     # Only run every 5th block if not Ethereum mainnet
     chain = chain_key()
@@ -185,18 +185,64 @@ async def report_status(time: datetime) -> None:
         call.add(strategy.getLiquidateCollateralFactor)
         call.add(strategy.targetLTVMultiplier)
         call.add(strategy.warningLTVMultiplier)
+        call.add(strategy.balanceOfDebt)
+        call.add(strategy.balanceOfLentAssets)
+        call.add(strategy.lastReport)
+        call.add(strategy.tendTrigger)
+        call.add(strategy.asset)
+        call.add(strategy.borrowToken)
 
     # Execute the multicall
     results = call()
 
-    # Process results in batches of 5 per strategy
+    # Cache current timestamp
+    now_ts = int(time.timestamp())
+
+    # Process results in batches of 11 per strategy
     for strategy, (
         name,
         raw_current_ltv,
         collateral_factor,
         target_ltv_mult,
         warning_ltv_mult,
-    ) in zip(current_strategies, itertools.batched(results, n=5)):
+        balance_of_debt,
+        balance_of_lent_assets,
+        last_report,
+        tend_trigger_result,
+        asset_address,
+        borrow_token_address,
+    ) in zip(current_strategies, itertools.batched(results, n=11)):
+        # Get token info for proper decimals and symbols
+        asset_token = Contract(asset_address, abi="bot/abis/IERC20.json")
+        borrow_token = Contract(borrow_token_address, abi="bot/abis/IERC20.json")
+
+        # Fetch token decimals and symbols via multicall
+        token_call = multicall.Call()
+        token_call.add(asset_token.decimals)
+        token_call.add(asset_token.symbol)
+        token_call.add(borrow_token.decimals)
+        token_call.add(borrow_token.symbol)
+        asset_decimals, asset_symbol, borrow_decimals, borrow_symbol = token_call()
+
+        # Calculate values with proper decimals
+        debt_formatted = balance_of_debt / (10**borrow_decimals)
+        lent_formatted = balance_of_lent_assets / (10**borrow_decimals)
+
+        # Calculate expected profit (if lent > debt, profit is the difference in borrow token terms)
+        expected_profit = max(0, lent_formatted - debt_formatted)
+
+        # Format time since last report
+        time_since_report = now_ts - last_report
+        if time_since_report < 3600:
+            time_str = f"{time_since_report // 60}m ago"
+        elif time_since_report < 86400:
+            time_str = f"{time_since_report // 3600}h {(time_since_report % 3600) // 60}m ago"
+        else:
+            time_str = f"{time_since_report // 86400}d {(time_since_report % 86400) // 3600}h ago"
+
+        # Extract tend trigger status (first element of tuple is the bool)
+        tend_status = tend_trigger_result[0]
+
         liquidation_threshold = collateral_factor / 1e16
         msg = (
             f"{random.choice(EMOJIS)} <b>{name}</b>\n\n"
@@ -205,6 +251,11 @@ async def report_status(time: datetime) -> None:
             f"<b>Warning:</b> {liquidation_threshold * warning_ltv_mult / 1e4:.1f}%\n"
             f"<b>Liquidation:</b> {liquidation_threshold:.1f}%\n"
             f"<b>Expected APR:</b> {int(apr_oracle().getStrategyApr(strategy.address, 0)) / 1e16:.2f}%\n\n"
+            f"<b>Amount Borrowed:</b> {debt_formatted:.2f} {borrow_symbol}\n"
+            f"<b>Amount in Lender Vault:</b> {lent_formatted:.2f} {borrow_symbol}\n"
+            f"<b>Expected Profit:</b> {expected_profit:.2f} {borrow_symbol}\n"
+            f"<b>Last Report:</b> {time_str}\n"
+            f"<b>Tend Trigger:</b> {tend_status}\n\n"
             f"<a href='{explorer_base_url()}{strategy.address}'>🔗 View Strategy</a>"
         )
 

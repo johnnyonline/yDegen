@@ -17,6 +17,7 @@ class NetworkCfg(TypedDict):
     ybold: Sequence[str]
     explorer: str
 
+
 NETWORKS: Mapping[str, NetworkCfg] = {
     "ethereum": {
         "lender_borrowers": [
