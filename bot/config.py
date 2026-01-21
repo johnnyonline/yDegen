@@ -17,13 +17,16 @@ class NetworkCfg(TypedDict):
     ybold: Sequence[str]
     explorer: str
 
-
 NETWORKS: Mapping[str, NetworkCfg] = {
     "ethereum": {
         "lender_borrowers": [
             "0x6dec370EfA894d48D8C55012B0Cd6f3C1C7C4616",  # Asymmetry tBTC Lender USDaf Borrower
             "0x48E560AfB1482f63e5e8C0eA7fBdd8Fd82054eC3",  # Curve WETH Lender crvUSD Borrower
-            "0xBc7998142b446beaE87cfd024A94320907eb64b1",  # Curve wstETH Lender crvUSD Borrower
+            "0x4727a60cb92bE2660A1BE082E3E830eaEF97f2d0",  # Curve wstETH Lender crvUSD Borrower
+            "0xBc7998142b446beaE87cfd024A94320907eb64b1",  # Curve WBTC Lender crvUSD Borrower
+            "0xF556ACeaeaC54b2c3734bb70b8D1Bae0b0580f26",  # Morpho WBTC/yvUSDC-1 Lender Borrower
+            "0xD0904a032d0418f32b8Ae6dc984995A0b36d43F9",  # Morpho WBTC/yvUSDT-1 Lender Borrower
+            "0x8dd272624392417830CA1a2DcbfDd7d1E14d3887",  # Morpho OETH/yvUSDC-1 Lender Borrower
         ],
         "ybold": [
             "0x2048A730f564246411415f719198d6f7c10A7961",  # yBOLD's WETH Strategy
@@ -39,10 +42,10 @@ NETWORKS: Mapping[str, NetworkCfg] = {
     },
     "base": {
         "lender_borrowers": [
-            "0xfdB431E661372fA1146efB70bf120ECDed944a78",  # Moonwell USDC Lender WETH Borrower
-            "0x945Df73d55557Ea23c0c35CD350d8DE3b745287E",  # Moonwell USDC Lender cbBTC Borrower
-            "0x03c5AfF0cd5e40889d689fD9D9Caff286b1BD7Fb",  # Moonwell cbBTC Lender WETH Borrower
-            "0xd89A4f020C8d256a2A4B0dC40B36Ee0b27680776",  # Moonwell cbETH Lender WETH Borrower
+            # "0xfdB431E661372fA1146efB70bf120ECDed944a78",  # Moonwell USDC Lender WETH Borrower
+            # "0x945Df73d55557Ea23c0c35CD350d8DE3b745287E",  # Moonwell USDC Lender cbBTC Borrower
+            # "0x03c5AfF0cd5e40889d689fD9D9Caff286b1BD7Fb",  # Moonwell cbBTC Lender WETH Borrower
+            # "0xd89A4f020C8d256a2A4B0dC40B36Ee0b27680776",  # Moonwell cbETH Lender WETH Borrower
         ],
         "ybold": [],
         "explorer": "https://basescan.org/address/",
