@@ -1,14 +1,23 @@
+networks:
+  custom:
+    - name: katana
+      chain_id: 747474
+      ecosystem: ethereum
+
 node:
   ethereum:
     mainnet:
       uri: "${ETH_RPC_URL}"
       ws_uri: "${ETH_WS_URL}"
+    katana:
+      uri: "${KATANA_RPC_URL}"
+      ws_uri: "${KATANA_WS_URL}"
 
   base:
     mainnet:
       uri: "${BASE_RPC_URL}"
       ws_uri: "${BASE_WS_URL}"
-  
+
   arbitrum:
     mainnet:
       uri: "${ARB_RPC_URL}"

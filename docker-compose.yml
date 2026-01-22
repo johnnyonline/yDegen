@@ -40,3 +40,14 @@ services:
         uv sync &&
         silverback run --network arbitrum:mainnet
       "
+  
+  katana-ydegen:
+    <<: *common
+    container_name: katana-ydegen
+    command: >
+      bash -lc "
+        uv venv --clear &&
+        . .venv/bin/activate &&
+        uv sync &&
+        silverback run --network ethereum:katana:node
+      "

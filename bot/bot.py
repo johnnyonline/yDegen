@@ -23,8 +23,8 @@ bot = SilverbackBot()
 
 STATE_FILE = "bot_state.json"
 
-STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "0 8 * * *")  # Daily at 8 AM UTC
-# STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "* * * * *")  # Every minute (for testing)
+# STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "0 8 * * *")  # Daily at 8 AM UTC
+STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "* * * * *")  # Every minute (for testing)
 ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "7200"))  # 2 hours default
 
 
@@ -245,7 +245,7 @@ async def report_status(time: datetime) -> None:
 
         liquidation_threshold = collateral_factor / 1e16
         msg = (
-            f"{random.choice(EMOJIS)} <b>{name}</b>\n\n"
+            f"{random.choice(EMOJIS)} <b>{name}</b>\n"
             f"<b>LTV:</b> {raw_current_ltv / 1e16:.1f}%\n"
             f"<b>Target:</b> {liquidation_threshold * target_ltv_mult / 1e4:.1f}%\n"
             f"<b>Warning:</b> {liquidation_threshold * warning_ltv_mult / 1e4:.1f}%\n"
@@ -255,7 +255,8 @@ async def report_status(time: datetime) -> None:
             f"<b>Amount in Lender Vault:</b> {lent_formatted:.2f} {borrow_symbol}\n"
             f"<b>Expected Profit:</b> {expected_profit:.2f} {borrow_symbol}\n"
             f"<b>Last Report:</b> {time_str}\n"
-            f"<b>Tend Trigger:</b> {tend_status}\n\n"
+            f"<b>Tend Trigger:</b> {tend_status}\n"
+            f"<b>Network:</b> {chain_key().capitalize()}\n\n"
             f"<a href='{explorer_base_url()}{strategy.address}'>🔗 View Strategy</a>"
         )
 

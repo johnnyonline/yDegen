@@ -25,9 +25,9 @@ NETWORKS: Mapping[str, NetworkCfg] = {
             "0x48E560AfB1482f63e5e8C0eA7fBdd8Fd82054eC3",  # Curve WETH Lender crvUSD Borrower
             "0x4727a60cb92bE2660A1BE082E3E830eaEF97f2d0",  # Curve wstETH Lender crvUSD Borrower
             "0xBc7998142b446beaE87cfd024A94320907eb64b1",  # Curve WBTC Lender crvUSD Borrower
-            "0xF556ACeaeaC54b2c3734bb70b8D1Bae0b0580f26",  # Morpho WBTC/yvUSDC-1 Lender Borrower
-            "0xD0904a032d0418f32b8Ae6dc984995A0b36d43F9",  # Morpho WBTC/yvUSDT-1 Lender Borrower
-            "0x8dd272624392417830CA1a2DcbfDd7d1E14d3887",  # Morpho OETH/yvUSDC-1 Lender Borrower
+            "0x68D01e2915c39b85EFE691dbb87bF93C6194A4a0",  # Morpho WBTC/yvUSD Lender Borrower
+            "0x9da810867E4AA706e02318Bf7869f8530af663ad",  # Morpho WBTC/yvUSDT-1 Lender Borrower
+            "0xc5976A234574A7345EfcbB3B0AaF5F435355d2DB",  # Morpho OETH/yvUSDC-1 Lender Borrower
         ],
         "ybold": [
             "0x2048A730f564246411415f719198d6f7c10A7961",  # yBOLD's WETH Strategy
@@ -65,6 +65,15 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         ],
         "explorer": "https://arbiscan.io/address/",
     },
+    "katana": {
+        "lender_borrowers": [
+            "0x0432337365d89c0D73f1D0Cb263791F8f1B98D43",  # Morpho vbWBTC/yvUSDC Lender Borrower
+            "0x3384246D42cAc0B8DD9BBDbE902A06D0814244f7",  # Morpho vbWBTC/yvUSDT Lender Borrower
+            "0x2F0b01d1F36FB2c72f7DEB441a2a262e655d6888",  # Morpho vbWETH/yvUSDC Lender Borrower
+        ],
+        "ybold": [],
+        "explorer": "https://katanascan.com/address/",
+    },
 }
 
 APR_ORACLE_ADDRESS = "0x1981AD9F44F2EA9aDd2dC4AD7D075c102C70aF92"
@@ -75,6 +84,11 @@ def apr_oracle() -> ContractInstance:
 
 
 def chain_key() -> str:
+    network_name = chain.provider.network.name.lower()
+    # Check if it's a custom network (like katana) that exists in our config
+    if network_name in NETWORKS:
+        return network_name
+    # Otherwise fall back to ecosystem name (ethereum, base, arbitrum, etc.)
     return cast(str, chain.provider.network.ecosystem.name.lower())
 
 
