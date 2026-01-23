@@ -17,6 +17,7 @@ class NetworkCfg(TypedDict):
     ybold: Sequence[str]
     explorer: str
 
+
 NETWORKS: Mapping[str, NetworkCfg] = {
     "ethereum": {
         "lender_borrowers": [
@@ -86,7 +87,7 @@ def chain_key() -> str:
     network_name = chain.provider.network.name.lower()
     # Check if it's a custom network (like katana) that exists in our config
     if network_name in NETWORKS:
-        return network_name
+        return cast(str, network_name)
     # Otherwise fall back to ecosystem name (ethereum, base, arbitrum, etc.)
     return cast(str, chain.provider.network.ecosystem.name.lower())
 
