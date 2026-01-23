@@ -17,14 +17,13 @@ class NetworkCfg(TypedDict):
     ybold: Sequence[str]
     explorer: str
 
-
 NETWORKS: Mapping[str, NetworkCfg] = {
     "ethereum": {
         "lender_borrowers": [
             "0x6dec370EfA894d48D8C55012B0Cd6f3C1C7C4616",  # Asymmetry tBTC Lender USDaf Borrower
-            "0x48E560AfB1482f63e5e8C0eA7fBdd8Fd82054eC3",  # Curve WETH Lender crvUSD Borrower
-            "0x4727a60cb92bE2660A1BE082E3E830eaEF97f2d0",  # Curve wstETH Lender crvUSD Borrower
-            "0xBc7998142b446beaE87cfd024A94320907eb64b1",  # Curve WBTC Lender crvUSD Borrower
+            "0xf6151034BEc135059E5A6Ccff43317652960ad41",  # Curve WETH/crvUSD Lender Borrower
+            "0xB3ef10D305A6CdbC5f19244de528d025F856EF6A",  # Curve wstETH/crvUSD Lender Borrower
+            "0x5cee43aa4Beb43E114C50d2127b206a6b95F1151",  # Curve WBTC/crvUSD Lender Borrower
             "0x68D01e2915c39b85EFE691dbb87bF93C6194A4a0",  # Morpho WBTC/yvUSD Lender Borrower
             "0x9da810867E4AA706e02318Bf7869f8530af663ad",  # Morpho WBTC/yvUSDT-1 Lender Borrower
             "0xc5976A234574A7345EfcbB3B0AaF5F435355d2DB",  # Morpho OETH/yvUSDC-1 Lender Borrower
