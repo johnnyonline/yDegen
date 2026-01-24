@@ -1,0 +1,26 @@
+[
+    {
+        "type": "function",
+        "name": "getStrategyApr",
+        "inputs": [
+            {
+                "name": "_strategy",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "_debtChange",
+                "type": "int256",
+                "internalType": "int256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    }
+]

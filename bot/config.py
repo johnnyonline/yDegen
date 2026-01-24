@@ -80,7 +80,7 @@ APR_ORACLE_ADDRESS = "0x1981AD9F44F2EA9aDd2dC4AD7D075c102C70aF92"
 
 
 def apr_oracle() -> ContractInstance:
-    return cast(ContractInstance, Contract(APR_ORACLE_ADDRESS))
+    return cast(ContractInstance, Contract(APR_ORACLE_ADDRESS, abi="bot/abis/IAprOracle.json"))
 
 
 def chain_key() -> str:

@@ -195,8 +195,11 @@ async def report_status(time: datetime) -> None:
     # Execute the multicall
     results = call()
 
-    # Cache current timestamp
+    # Cache current timestamp and frequently used values
     now_ts = int(time.timestamp())
+    oracle = apr_oracle()
+    network = chain_key().capitalize()
+    explorer_url = explorer_base_url()
 
     # Process results in batches of 11 per strategy
     for strategy, (
@@ -250,14 +253,14 @@ async def report_status(time: datetime) -> None:
             f"<b>Target:</b> {liquidation_threshold * target_ltv_mult / 1e4:.1f}%\n"
             f"<b>Warning:</b> {liquidation_threshold * warning_ltv_mult / 1e4:.1f}%\n"
             f"<b>Liquidation:</b> {liquidation_threshold:.1f}%\n"
-            f"<b>Expected APR:</b> {int(apr_oracle().getStrategyApr(strategy.address, 0)) / 1e16:.2f}%\n\n"
+            f"<b>Expected APR:</b> {int(oracle.getStrategyApr(strategy.address, 0)) / 1e16:.2f}%\n\n"
             f"<b>Amount Borrowed:</b> {debt_formatted:.2f} {borrow_symbol}\n"
             f"<b>Amount in Lender Vault:</b> {lent_formatted:.2f} {borrow_symbol}\n"
             f"<b>Expected Profit:</b> {expected_profit:.2f} {borrow_symbol}\n"
             f"<b>Last Report:</b> {time_str}\n"
             f"<b>Tend Trigger:</b> {tend_status}\n"
-            f"<b>Network:</b> {chain_key().capitalize()}\n\n"
-            f"<a href='{explorer_base_url()}{strategy.address}'>🔗 View Strategy</a>"
+            f"<b>Network:</b> {network}\n\n"
+            f"<a href='{explorer_url}{strategy.address}'>🔗 View Strategy</a>"
         )
 
         await notify_group_chat(msg)
