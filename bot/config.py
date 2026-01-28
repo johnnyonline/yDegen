@@ -14,6 +14,7 @@ EMOJIS = [
 
 class NetworkCfg(TypedDict):
     lender_borrowers: Sequence[str]
+    liquity_lender_borrowers: Mapping[str, int]  # address -> collIndex
     ybold: Sequence[str]
     explorer: str
 
@@ -29,6 +30,9 @@ NETWORKS: Mapping[str, NetworkCfg] = {
             "0x9da810867E4AA706e02318Bf7869f8530af663ad",  # Morpho WBTC/yvUSDT-1 Lender Borrower
             "0xc5976A234574A7345EfcbB3B0AaF5F435355d2DB",  # Morpho OETH/yvUSDC-1 Lender Borrower
         ],
+        "liquity_lender_borrowers": {
+            "0x2fFff76ee152164f4dEfc95fB0cf88528251aB9E": 2,  # Liquity rETH/BOLD Lender Borrower (collIndex=2)
+        },
         "ybold": [
             "0x2048A730f564246411415f719198d6f7c10A7961",  # yBOLD's WETH Strategy
             "0x46af61661B1e15DA5bFE40756495b7881F426214",  # yBOLD's wstETH Strategy
@@ -48,11 +52,13 @@ NETWORKS: Mapping[str, NetworkCfg] = {
             # "0x03c5AfF0cd5e40889d689fD9D9Caff286b1BD7Fb",  # Moonwell cbBTC Lender WETH Borrower
             # "0xd89A4f020C8d256a2A4B0dC40B36Ee0b27680776",  # Moonwell cbETH Lender WETH Borrower
         ],
+        "liquity_lender_borrowers": {},
         "ybold": [],
         "explorer": "https://basescan.org/address/",
     },
     "arbitrum": {
         "lender_borrowers": [],
+        "liquity_lender_borrowers": {},
         "ybold": [
             "0xe037A8F2Fa17293d94620c1846F84d047379660a",  # yUSND's WETH Strategy
             "0x533337c57dFA768F4B4827048b320aa78D909D30",  # yUSND's wstETH Strategy
@@ -71,6 +77,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
             "0x3384246D42cAc0B8DD9BBDbE902A06D0814244f7",  # Morpho vbWBTC/yvUSDT Lender Borrower
             "0x2F0b01d1F36FB2c72f7DEB441a2a262e655d6888",  # Morpho vbWETH/yvUSDC Lender Borrower
         ],
+        "liquity_lender_borrowers": {},
         "ybold": [],
         "explorer": "https://katanascan.com/address/",
     },
@@ -100,12 +107,20 @@ def lender_borrower_strategies() -> list[ContractInstance]:
     return [Contract(addr) for addr in cfg()["lender_borrowers"]]
 
 
+def liquity_lender_borrower_strategies() -> list[ContractInstance]:
+    return [Contract(addr) for addr in cfg()["liquity_lender_borrowers"].keys()]
+
+
+def liquity_coll_index(address: str) -> int:
+    return cfg()["liquity_lender_borrowers"][address]
+
+
 def ybold_strategies() -> list[ContractInstance]:
     return [Contract(addr) for addr in cfg()["ybold"]]
 
 
 def strategies() -> list[ContractInstance]:
-    return lender_borrower_strategies() + ybold_strategies()
+    return lender_borrower_strategies() + liquity_lender_borrower_strategies() + ybold_strategies()
 
 
 def explorer_base_url() -> str:

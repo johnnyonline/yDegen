@@ -1,0 +1,51 @@
+[
+    {
+        "type": "function",
+        "name": "getDebtBetweenInterestRateAndTrove",
+        "inputs": [
+            {
+                "name": "_collIndex",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "_interestRateLo",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "_interestRateHi",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "_troveIdToStopAt",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "_hintId",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "_numTrials",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "debt",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "blockTimestamp",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    }
+]

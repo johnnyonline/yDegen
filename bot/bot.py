@@ -1,9 +1,7 @@
 import itertools
-import json
 import os
-import random
 from datetime import datetime
-from typing import Annotated, Any, Dict, cast
+from typing import Annotated
 
 from ape import Contract, chain
 from ape.api import BlockAPI
@@ -11,8 +9,17 @@ from ape_ethereum import multicall
 from silverback import SilverbackBot, StateSnapshot
 from taskiq import Context, TaskiqDepends
 
-from bot.config import EMOJIS, apr_oracle, chain_key, explorer_base_url, lender_borrower_strategies, strategies
+from bot.config import (
+    apr_oracle,
+    chain_key,
+    explorer_base_url,
+    lender_borrower_strategies,
+    liquity_coll_index,
+    liquity_lender_borrower_strategies,
+    strategies,
+)
 from bot.tg import ERROR_GROUP_CHAT_ID, notify_group_chat
+from bot.utils import load_state, report_strategy, save_state
 
 # =============================================================================
 # Bot Configuration & Constants
@@ -21,10 +28,8 @@ from bot.tg import ERROR_GROUP_CHAT_ID, notify_group_chat
 
 bot = SilverbackBot()
 
-STATE_FILE = "bot_state.json"
-
-STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "0 8 * * *")  # Daily at 8 AM UTC
-# STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "* * * * *")  # Every minute (for testing)
+# STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "0 8 * * *")  # Daily at 8 AM UTC
+STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "* * * * *")  # Every minute (for testing)
 ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "7200"))  # 2 hours default
 
 
@@ -171,114 +176,22 @@ async def check_still_profitable(block: BlockAPI, context: Annotated[Context, Ta
 
 @bot.cron(STATUS_REPORT_CRON)
 async def report_status(time: datetime) -> None:
-    # Get current lender borrower strategies. Skip if none found
-    current_strategies = list(lender_borrower_strategies())
-    if not current_strategies:
+    # Combine regular and liquity lender borrower strategies
+    regular_strategies = list(lender_borrower_strategies())
+    liquity_strategies = list(liquity_lender_borrower_strategies())
+    liquity_addresses = {s.address for s in liquity_strategies}
+    all_strategies = regular_strategies + liquity_strategies
+
+    if not all_strategies:
         return
 
-    # Prepare multicall for all strategy data
-    call = multicall.Call()
-    for strategy in current_strategies:
-        strategy = Contract(strategy.address, abi="bot/abis/ILenderBorrower.json")  # Loading ABI manually
-        call.add(strategy.name)
-        call.add(strategy.getCurrentLTV)
-        call.add(strategy.getLiquidateCollateralFactor)
-        call.add(strategy.targetLTVMultiplier)
-        call.add(strategy.warningLTVMultiplier)
-        call.add(strategy.balanceOfDebt)
-        call.add(strategy.balanceOfLentAssets)
-        call.add(strategy.lastReport)
-        call.add(strategy.tendTrigger)
-        call.add(strategy.asset)
-        call.add(strategy.borrowToken)
-
-    # Execute the multicall
-    results = call()
-
-    # Cache current timestamp and frequently used values
+    # Cache frequently used values
     now_ts = int(time.timestamp())
     oracle = apr_oracle()
     network = chain_key().capitalize()
     explorer_url = explorer_base_url()
 
-    # Process results in batches of 11 per strategy
-    for strategy, (
-        name,
-        raw_current_ltv,
-        collateral_factor,
-        target_ltv_mult,
-        warning_ltv_mult,
-        balance_of_debt,
-        balance_of_lent_assets,
-        last_report,
-        tend_trigger_result,
-        asset_address,
-        borrow_token_address,
-    ) in zip(current_strategies, itertools.batched(results, n=11)):
-        # Get token info for proper decimals and symbols
-        asset_token = Contract(asset_address, abi="bot/abis/IERC20.json")
-        borrow_token = Contract(borrow_token_address, abi="bot/abis/IERC20.json")
-
-        # Fetch token decimals and symbols via multicall
-        token_call = multicall.Call()
-        token_call.add(asset_token.decimals)
-        token_call.add(asset_token.symbol)
-        token_call.add(borrow_token.decimals)
-        token_call.add(borrow_token.symbol)
-        asset_decimals, asset_symbol, borrow_decimals, borrow_symbol = token_call()
-
-        # Calculate values with proper decimals
-        debt_formatted = balance_of_debt / (10**borrow_decimals)
-        lent_formatted = balance_of_lent_assets / (10**borrow_decimals)
-
-        # Calculate expected profit (if lent > debt, profit is the difference in borrow token terms)
-        expected_profit = max(0, lent_formatted - debt_formatted)
-
-        # Format time since last report
-        time_since_report = now_ts - last_report
-        if time_since_report < 3600:
-            time_str = f"{time_since_report // 60}m ago"
-        elif time_since_report < 86400:
-            time_str = f"{time_since_report // 3600}h {(time_since_report % 3600) // 60}m ago"
-        else:
-            time_str = f"{time_since_report // 86400}d {(time_since_report % 86400) // 3600}h ago"
-
-        # Extract tend trigger status (first element of tuple is the bool)
-        tend_status = tend_trigger_result[0]
-
-        liquidation_threshold = collateral_factor / 1e16
-        msg = (
-            f"{random.choice(EMOJIS)} <b>{name}</b>\n"
-            f"<b>LTV:</b> {raw_current_ltv / 1e16:.1f}%\n"
-            f"<b>Target:</b> {liquidation_threshold * target_ltv_mult / 1e4:.1f}%\n"
-            f"<b>Warning:</b> {liquidation_threshold * warning_ltv_mult / 1e4:.1f}%\n"
-            f"<b>Liquidation:</b> {liquidation_threshold:.1f}%\n"
-            f"<b>Expected APR:</b> {int(oracle.getStrategyApr(strategy.address, 0)) / 1e16:.2f}%\n\n"
-            f"<b>Amount Borrowed:</b> {debt_formatted:.2f} {borrow_symbol}\n"
-            f"<b>Amount in Lender Vault:</b> {lent_formatted:.2f} {borrow_symbol}\n"
-            f"<b>Expected Profit:</b> {expected_profit:.2f} {borrow_symbol}\n"
-            f"<b>Last Report:</b> {time_str}\n"
-            f"<b>Tend Trigger:</b> {tend_status}\n"
-            f"<b>Network:</b> {network}\n\n"
-            f"<a href='{explorer_url}{strategy.address}'>🔗 View Strategy</a>"
-        )
-
-        await notify_group_chat(msg)
-
-
-# =============================================================================
-# Helpers
-# =============================================================================
-
-
-def load_state() -> Dict[str, Any]:
-    try:
-        with open(STATE_FILE, "r") as f:
-            return cast(Dict[str, Any], json.load(f))
-    except FileNotFoundError:
-        return {}
-
-
-def save_state(state: Dict[str, Any]) -> None:
-    with open(STATE_FILE, "w") as f:
-        json.dump(state, f)
+    for strategy in all_strategies:
+        is_liquity = strategy.address in liquity_addresses
+        coll_index = liquity_coll_index(strategy.address) if is_liquity else 0
+        await report_strategy(strategy, is_liquity, coll_index, now_ts, oracle, network, explorer_url)
