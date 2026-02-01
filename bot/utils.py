@@ -1,11 +1,11 @@
 import json
 import os
 import random
+import time
 from typing import Any, cast
 
 from ape import Contract, accounts, networks
 from ape.contracts.base import ContractInstance
-from ape.exceptions import ContractLogicError
 from ape_accounts import import_account_from_private_key
 from ape_ethereum import multicall
 
@@ -17,6 +17,9 @@ PRIVATE_RPC = "https://rpc.flashbots.net/?builder=f1b.io&builder=rsync&builder=b
 STATE_FILE = "bot_state.json"
 ACCOUNT_ALIAS = "tender"
 ACCOUNT_PASSWORD = "42069"
+
+TEND_MAX_RETRIES = 5
+TEND_RETRY_DELAY = 10  # seconds
 
 TROVE_STATUS = ["Non Existent", "Active", "Closed By Owner", "Closed By Liquidation", "Zombie"]
 DEBT_IN_FRONT_HELPER = "0x4bb5E28FDB12891369b560f2Fab3C032600677c6"
@@ -63,16 +66,19 @@ def send_tend(strategy_address: str, signer: Any) -> str | None:
 
 def execute_tend(strategy_address: str) -> str | None:
     """Execute tend on a strategy via relayer. Uses private RPC on Ethereum mainnet."""
-    try:
-        signer = get_signer()
-        if chain_key() == "ethereum":
-            with networks.ethereum.mainnet.use_provider(PRIVATE_RPC):
+    signer = get_signer()
+    for attempt in range(TEND_MAX_RETRIES):
+        try:
+            if chain_key() == "ethereum":
+                with networks.ethereum.mainnet.use_provider(PRIVATE_RPC):
+                    return send_tend(strategy_address, signer)
+            else:
                 return send_tend(strategy_address, signer)
-        else:
-            return send_tend(strategy_address, signer)
-    except ContractLogicError as e:
-        print(f"execute_tend: {e}")
-        return None
+        except Exception as e:
+            print(f"execute_tend attempt {attempt + 1}/{TEND_MAX_RETRIES} failed: {e}")
+            if attempt < TEND_MAX_RETRIES - 1:
+                time.sleep(TEND_RETRY_DELAY)
+    return None
 
 
 def get_signer_balance() -> int:

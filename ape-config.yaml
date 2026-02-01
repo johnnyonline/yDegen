@@ -7,6 +7,7 @@ networks:
 node:
   ethereum:
     mainnet:
+      transaction_acceptance_timeout: 600  # 10 minutes
       gas_limit:
         auto:
           multiplier: 1.5  # Multiply 1.5 times the result of eth_estimateGas
