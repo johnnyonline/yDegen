@@ -3,15 +3,17 @@ import os
 import random
 from typing import Any, cast
 
-from ape import Contract, accounts
+from ape import Contract, accounts, networks
 from ape.contracts.base import ContractInstance
 from ape.exceptions import ContractLogicError
 from ape_accounts import import_account_from_private_key
 from ape_ethereum import multicall
 
-from bot.config import EMOJIS, relayer
+from bot.config import EMOJIS, chain_key, relayer
 from bot.tg import notify_group_chat
 
+# PRIVATE_RPC = "https://rpc.mevblocker.io/noreverts"
+PRIVATE_RPC = "https://rpc.flashbots.net/?builder=f1b.io&builder=rsync&builder=beaverbuild.org&builder=builder0x69&builder=Titan&builder=EigenPhi&builder=boba-builder&builder=Gambit+Labs&builder=payload&builder=Loki&builder=BuildAI&builder=JetBuilder&builder=tbuilder&builder=penguinbuild&builder=bobthebuilder&builder=BTCS&builder=bloXroute&builder=Blockbeelder&builder=Quasar&builder=Eureka&hint=default_logs&originId=protect-website"
 STATE_FILE = "bot_state.json"
 ACCOUNT_ALIAS = "tender"
 ACCOUNT_PASSWORD = "42069"
@@ -48,17 +50,26 @@ def get_signer() -> Any:
     return account
 
 
+def send_tend(strategy_address: str, signer: Any) -> str | None:
+    """Internal helper to send tend transaction."""
+    relayer_contract = relayer()
+    if not relayer_contract:
+        return None
+    receipt = relayer_contract.tendStrategy(strategy_address, sender=signer, required_confirmations=0)
+    # weth = Contract("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", abi="bot/abis/IERC20.json")
+    # receipt = weth.approve(strategy_address, 0, sender=signer, required_confirmations=0)
+    return str(receipt.txn_hash)
+
+
 def execute_tend(strategy_address: str) -> str | None:
-    """Execute tend on a strategy via relayer. Returns tx hash on success."""
+    """Execute tend on a strategy via relayer. Uses private RPC on Ethereum mainnet."""
     try:
-        relayer_contract = relayer()
-        if not relayer_contract:
-            return None
         signer = get_signer()
-        receipt = relayer_contract.tendStrategy(strategy_address, sender=signer, required_confirmations=0)
-        # weth = Contract("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", abi="bot/abis/IERC20.json")
-        # receipt = weth.approve(strategy_address, 0, sender=signer, required_confirmations=0)
-        return str(receipt.txn_hash)
+        if chain_key() == "ethereum":
+            with networks.ethereum.mainnet.use_provider(PRIVATE_RPC):
+                return send_tend(strategy_address, signer)
+        else:
+            return send_tend(strategy_address, signer)
     except ContractLogicError as e:
         print(f"execute_tend: {e}")
         return None
