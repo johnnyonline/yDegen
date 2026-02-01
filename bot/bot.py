@@ -210,11 +210,12 @@ async def report_status(time: datetime) -> None:
 @bot.cron(BALANCE_CHECK_CRON)  # type: ignore[untyped-decorator]
 async def check_signer_balance(time: datetime) -> None:
     balance = get_signer_balance()
-    if balance < MIN_SIGNER_BALANCE:
+    min_balance = MIN_SIGNER_BALANCE if chain_key() == "ethereum" else MIN_SIGNER_BALANCE // 10
+    if balance < min_balance:
         await notify_group_chat(
             f"⚠️ <b>Low signer balance!</b>\n\n"
             f"<b>Balance:</b> {balance / 1e18:.4f} ETH\n"
-            f"<b>Minimum:</b> {MIN_SIGNER_BALANCE / 1e18:.4f} ETH\n"
+            f"<b>Minimum:</b> {min_balance / 1e18:.4f} ETH\n"
             f"<b>Network:</b> {chain_key().capitalize()}\n\n"
             f"<i>Checking again in 5 hours...</i>"
         )
