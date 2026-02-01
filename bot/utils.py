@@ -58,7 +58,7 @@ def execute_tend(strategy_address: str) -> str | None:
         receipt = relayer_contract.tendStrategy(strategy_address, sender=signer, required_confirmations=0)
         # weth = Contract("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", abi="bot/abis/IERC20.json")
         # receipt = weth.approve(strategy_address, 0, sender=signer, required_confirmations=0)
-        return receipt.txn_hash
+        return str(receipt.txn_hash)
     except ContractLogicError as e:
         print(f"execute_tend: {e}")
         return None
@@ -68,7 +68,7 @@ def get_signer_balance() -> int:
     """Get the signer's ETH balance in wei."""
     try:
         signer = get_signer()
-        return signer.balance
+        return int(signer.balance)
     except Exception:
         return 0
 

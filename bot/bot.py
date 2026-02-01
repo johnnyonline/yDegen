@@ -40,7 +40,7 @@ BALANCE_CHECK_CRON = os.getenv("BALANCE_CHECK_CRON", "0 */5 * * *")  # Every 5 h
 # =============================================================================
 
 
-@bot.on_startup()
+@bot.on_startup()  # type: ignore[untyped-decorator]
 async def bot_startup(startup_state: StateSnapshot) -> None:
     await notify_group_chat(
         f"🟢 <b>{chain_key()} yDegen bot started successfully</b>",
@@ -48,7 +48,7 @@ async def bot_startup(startup_state: StateSnapshot) -> None:
     )
 
 
-@bot.on_shutdown()
+@bot.on_shutdown()  # type: ignore[untyped-decorator]
 async def bot_shutdown() -> None:
     await notify_group_chat(
         f"🔴 <b>{chain_key()} yDegen bot shutdown successfully</b>",
@@ -61,7 +61,7 @@ async def bot_shutdown() -> None:
 # =============================================================================
 
 
-@bot.on_(chain.blocks)
+@bot.on_(chain.blocks)  # type: ignore[untyped-decorator]
 async def check_tend_triggers(block: BlockAPI, context: Annotated[Context, TaskiqDepends()]) -> None:
     # Only run every 100th block if not mainnet
     chain = chain_key()
@@ -184,7 +184,7 @@ async def check_still_profitable(block: BlockAPI, context: Annotated[Context, Ta
 # =============================================================================
 
 
-@bot.cron(STATUS_REPORT_CRON)
+@bot.cron(STATUS_REPORT_CRON)  # type: ignore[untyped-decorator]
 async def report_status(time: datetime) -> None:
     # Combine regular and liquity lender borrower strategies
     regular_strategies = list(lender_borrower_strategies())
@@ -207,7 +207,7 @@ async def report_status(time: datetime) -> None:
         await report_strategy(strategy, is_liquity, coll_index, now_ts, oracle, network, explorer_url)
 
 
-@bot.cron(BALANCE_CHECK_CRON)
+@bot.cron(BALANCE_CHECK_CRON)  # type: ignore[untyped-decorator]
 async def check_signer_balance(time: datetime) -> None:
     balance = get_signer_balance()
     if balance < MIN_SIGNER_BALANCE:
