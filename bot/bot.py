@@ -19,7 +19,7 @@ from bot.config import (
     strategies,
 )
 from bot.tg import ERROR_GROUP_CHAT_ID, notify_group_chat
-from bot.utils import load_state, report_strategy, save_state
+from bot.utils import execute_tend, get_signer_balance, load_state, report_strategy, save_state
 
 # =============================================================================
 # Bot Configuration & Constants
@@ -31,6 +31,8 @@ bot = SilverbackBot()
 STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "0 8 * * *")  # Daily at 8 AM UTC
 # STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "* * * * *")  # Every minute (for testing)
 ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "7200"))  # 2 hours default
+MIN_SIGNER_BALANCE = int(os.getenv("MIN_SIGNER_BALANCE", str(5 * 10**16)))  # 0.05 ETH default
+BALANCE_CHECK_CRON = os.getenv("BALANCE_CHECK_CRON", "0 */5 * * *")  # Every 5 hours
 
 
 # =============================================================================
@@ -97,18 +99,26 @@ async def check_tend_triggers(block: BlockAPI, context: Annotated[Context, Taski
 
         strategy = Contract(strategy.address, abi="bot/abis/ITokenizedStrategy.json")  # Loading ABI manually
 
+        # Update the timestamp in state
+        state.setdefault("tend_alerts_ts", {})[strategy.address] = now_ts
+        save_state(state)
+
         await notify_group_chat(
             f"🚨 <b>Strategy needs tending!</b>\n\n"
             f"<b>Name:</b> {strategy.name()}\n"
             f"<b>Network:</b> {chain.capitalize()}\n"
             f"<b>Block Number:</b> {block_number}\n\n"
+            f"<i>Attempting to tend...</i>\n"
             f"<i>Sleeping for {int(ALERT_COOLDOWN_SECONDS / 60)} minutes...</i>\n\n"
             f"<a href='{explorer_base_url()}{strategy.address}'>🔗 View Strategy</a>"
         )
 
-        # Update the timestamp in state
-        state.setdefault("tend_alerts_ts", {})[strategy.address] = now_ts
-        save_state(state)
+        tx_hash = execute_tend(strategy.address)
+        if tx_hash:
+            await notify_group_chat(
+                f"✅ <b>Tend tx submitted</b>\n\n"
+                f"<a href='{explorer_base_url().replace('/address/', '/tx/')}{tx_hash}'>🔗 View Transaction</a>"
+            )
 
 
 # @bot.on_(chain.blocks)
@@ -195,3 +205,16 @@ async def report_status(time: datetime) -> None:
         is_liquity = strategy.address in liquity_addresses
         coll_index = liquity_coll_index(strategy.address) if is_liquity else 0
         await report_strategy(strategy, is_liquity, coll_index, now_ts, oracle, network, explorer_url)
+
+
+@bot.cron(BALANCE_CHECK_CRON)
+async def check_signer_balance(time: datetime) -> None:
+    balance = get_signer_balance()
+    if balance < MIN_SIGNER_BALANCE:
+        await notify_group_chat(
+            f"⚠️ <b>Low signer balance!</b>\n\n"
+            f"<b>Balance:</b> {balance / 1e18:.4f} ETH\n"
+            f"<b>Minimum:</b> {MIN_SIGNER_BALANCE / 1e18:.4f} ETH\n"
+            f"<b>Network:</b> {chain_key().capitalize()}\n\n"
+            f"<i>Checking again in 5 hours...</i>"
+        )

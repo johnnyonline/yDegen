@@ -17,6 +17,7 @@ class NetworkCfg(TypedDict):
     liquity_lender_borrowers: Mapping[str, int]  # address -> collIndex
     ybold: Sequence[str]
     explorer: str
+    relayer: str | None
 
 
 NETWORKS: Mapping[str, NetworkCfg] = {
@@ -44,6 +45,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
             "0x1d53B127629AF8df7da5488833a50c2F12692F5C",  # sUSDaf's WBTC18 Strategy
         ],
         "explorer": "https://etherscan.io/address/",
+        "relayer": "0x604e586F17cE106B64185A7a0d2c1Da5bAce711E",
     },
     "base": {
         "lender_borrowers": [
@@ -55,6 +57,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "liquity_lender_borrowers": {},
         "ybold": [],
         "explorer": "https://basescan.org/address/",
+        "relayer": "0x46679Ba8ce6473a9E0867c52b5A50ff97579740E",
     },
     "arbitrum": {
         "lender_borrowers": [],
@@ -70,6 +73,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
             "0x15B89e3E1C19e76d6bBD39A7b7c1f2f83C9B3Afc",  # yUSND's tBTC Strategy
         ],
         "explorer": "https://arbiscan.io/address/",
+        "relayer": "0xE0D19f6b240659da8E87ABbB73446E7B4346Baee",
     },
     "katana": {
         "lender_borrowers": [
@@ -80,6 +84,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "liquity_lender_borrowers": {},
         "ybold": [],
         "explorer": "https://katanascan.com/address/",
+        "relayer": "0xC29cbdcf5843f8550530cc5d627e1dd3007EF231",
     },
 }
 
@@ -125,3 +130,10 @@ def strategies() -> list[ContractInstance]:
 
 def explorer_base_url() -> str:
     return cfg()["explorer"]
+
+
+def relayer() -> ContractInstance | None:
+    addr = cfg()["relayer"]
+    if not addr:
+        return None
+    return cast(ContractInstance, Contract(addr, abi="bot/abis/IRelayer.json"))

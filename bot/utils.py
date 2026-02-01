@@ -1,15 +1,20 @@
 import json
+import os
 import random
 from typing import Any, cast
 
-from ape import Contract
+from ape import Contract, accounts
 from ape.contracts.base import ContractInstance
+from ape.exceptions import ContractLogicError
+from ape_accounts import import_account_from_private_key
 from ape_ethereum import multicall
 
-from bot.config import EMOJIS
+from bot.config import EMOJIS, relayer
 from bot.tg import notify_group_chat
 
 STATE_FILE = "bot_state.json"
+ACCOUNT_ALIAS = "tender"
+ACCOUNT_PASSWORD = "42069"
 
 TROVE_STATUS = ["Non Existent", "Active", "Closed By Owner", "Closed By Liquidation", "Zombie"]
 DEBT_IN_FRONT_HELPER = "0x4bb5E28FDB12891369b560f2Fab3C032600677c6"
@@ -27,6 +32,45 @@ def load_state() -> dict[str, Any]:
 def save_state(state: dict[str, Any]) -> None:
     with open(STATE_FILE, "w") as f:
         json.dump(state, f)
+
+
+def get_signer() -> Any:
+    private_key = os.getenv("BOT_PRIVATE_KEY")
+    if not private_key:
+        raise RuntimeError("!BOT_PRIVATE_KEY")
+
+    try:
+        account = import_account_from_private_key(ACCOUNT_ALIAS, ACCOUNT_PASSWORD, private_key)
+    except Exception:
+        account = accounts.load(ACCOUNT_ALIAS)
+
+    account.set_autosign(True, passphrase=ACCOUNT_PASSWORD)
+    return account
+
+
+def execute_tend(strategy_address: str) -> str | None:
+    """Execute tend on a strategy via relayer. Returns tx hash on success."""
+    try:
+        relayer_contract = relayer()
+        if not relayer_contract:
+            return None
+        signer = get_signer()
+        receipt = relayer_contract.tendStrategy(strategy_address, sender=signer, required_confirmations=0)
+        # weth = Contract("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", abi="bot/abis/IERC20.json")
+        # receipt = weth.approve(strategy_address, 0, sender=signer, required_confirmations=0)
+        return receipt.txn_hash
+    except ContractLogicError as e:
+        print(f"execute_tend: {e}")
+        return None
+
+
+def get_signer_balance() -> int:
+    """Get the signer's ETH balance in wei."""
+    try:
+        signer = get_signer()
+        return signer.balance
+    except Exception:
+        return 0
 
 
 def format_time_ago(seconds: int) -> str:

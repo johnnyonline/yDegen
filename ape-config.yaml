@@ -7,6 +7,9 @@ networks:
 node:
   ethereum:
     mainnet:
+      gas_limit:
+        auto:
+          multiplier: 1.5  # Multiply 1.5 times the result of eth_estimateGas
       uri: "${ETH_RPC_URL}"
       ws_uri: "${ETH_WS_URL}"
     katana:
