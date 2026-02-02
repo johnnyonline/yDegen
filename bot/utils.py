@@ -2,6 +2,7 @@ import json
 import os
 import random
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, cast
 
 from ape import Contract, accounts, networks
@@ -9,21 +10,20 @@ from ape.contracts.base import ContractInstance
 from ape_accounts import import_account_from_private_key
 from ape_ethereum import multicall
 
-from bot.config import EMOJIS, chain_key, relayer
+from bot.config import EMOJIS, explorer_base_url, relayer
 from bot.tg import notify_group_chat
 
-# PRIVATE_RPC = "https://rpc.mevblocker.io/noreverts"
-PRIVATE_RPC = "https://rpc.flashbots.net/?builder=f1b.io&builder=rsync&builder=beaverbuild.org&builder=builder0x69&builder=Titan&builder=EigenPhi&builder=boba-builder&builder=Gambit+Labs&builder=payload&builder=Loki&builder=BuildAI&builder=JetBuilder&builder=tbuilder&builder=penguinbuild&builder=bobthebuilder&builder=BTCS&builder=bloXroute&builder=Blockbeelder&builder=Quasar&builder=Eureka&hint=default_logs&originId=protect-website"
+PRIVATE_RPC = "https://rpc.mevblocker.io/noreverts"
+# PRIVATE_RPC = "https://rpc.flashbots.net/?builder=f1b.io&builder=rsync&builder=beaverbuild.org&builder=builder0x69&builder=Titan&builder=EigenPhi&builder=boba-builder&builder=Gambit+Labs&builder=payload&builder=Loki&builder=BuildAI&builder=JetBuilder&builder=tbuilder&builder=penguinbuild&builder=bobthebuilder&builder=BTCS&builder=bloXroute&builder=Blockbeelder&builder=Quasar&builder=Eureka&hint=default_logs&originId=protect-website"
 STATE_FILE = "bot_state.json"
 ACCOUNT_ALIAS = "tender"
 ACCOUNT_PASSWORD = "42069"
 
-TEND_MAX_RETRIES = 5
-TEND_RETRY_DELAY = 10  # seconds
-
 TROVE_STATUS = ["Non Existent", "Active", "Closed By Owner", "Closed By Liquidation", "Zombie"]
 DEBT_IN_FRONT_HELPER = "0x4bb5E28FDB12891369b560f2Fab3C032600677c6"
 MAX_UINT256 = 2**256 - 1
+
+_tend_executor = ThreadPoolExecutor(max_workers=1)
 
 
 def load_state() -> dict[str, Any]:
@@ -55,30 +55,55 @@ def get_signer() -> Any:
 
 def send_tend(strategy_address: str, signer: Any) -> str | None:
     """Internal helper to send tend transaction."""
+    nonce = signer.nonce
     relayer_contract = relayer()
     if not relayer_contract:
         return None
-    receipt = relayer_contract.tendStrategy(strategy_address, sender=signer, required_confirmations=0)
+    receipt = relayer_contract.tendStrategy(strategy_address, sender=signer, nonce=nonce, required_confirmations=0)
     # weth = Contract("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", abi="bot/abis/IERC20.json")
-    # receipt = weth.approve(strategy_address, 0, sender=signer, required_confirmations=0)
+    # receipt = weth.approve(strategy_address, 0, sender=signer, nonce=nonce, required_confirmations=0)
     return str(receipt.txn_hash)
 
 
-def execute_tend(strategy_address: str) -> str | None:
-    """Execute tend on a strategy via relayer. Uses private RPC on Ethereum mainnet."""
-    signer = get_signer()
-    for attempt in range(TEND_MAX_RETRIES):
-        try:
-            if chain_key() == "ethereum":
-                with networks.ethereum.mainnet.use_provider(PRIVATE_RPC):
-                    return send_tend(strategy_address, signer)
-            else:
-                return send_tend(strategy_address, signer)
-        except Exception as e:
-            print(f"execute_tend attempt {attempt + 1}/{TEND_MAX_RETRIES} failed: {e}")
-            if attempt < TEND_MAX_RETRIES - 1:
-                time.sleep(TEND_RETRY_DELAY)
-    return None
+def tend_worker(strategy_address: str, strategy_name: str, network: str) -> None:
+    """Worker function that runs in a separate thread to execute tend."""
+    import asyncio
+
+    start_time = time.time()
+    try:
+        signer = get_signer()
+        if network.lower() == "ethereum":
+            with networks.ethereum.mainnet.use_provider(PRIVATE_RPC):
+                tx_hash = send_tend(strategy_address, signer)
+        else:
+            tx_hash = send_tend(strategy_address, signer)
+
+        elapsed = int(time.time() - start_time)
+        if tx_hash:
+            msg = (
+                f"✅ <b>Tend tx submitted</b>\n\n"
+                f"<b>Name:</b> {strategy_name}\n"
+                f"<b>Time to include:</b> {format_duration(elapsed)}\n"
+                f"<b>Network:</b> {network}\n\n"
+                f"<a href='{explorer_base_url().replace('/address/', '/tx/')}{tx_hash}'>🔗 View Transaction</a>"
+            )
+            asyncio.run(notify_group_chat(msg))
+    except Exception as e:
+        elapsed = int(time.time() - start_time)
+        msg = (
+            f"❌ <b>Tend tx failed</b>\n\n"
+            f"<b>Name:</b> {strategy_name}\n"
+            f"<b>Time elapsed:</b> {format_duration(elapsed)}\n"
+            f"<b>Network:</b> {network}\n"
+            f"<b>Error:</b> {e}\n\n"
+            f"<i>Will retry soon...</i>"
+        )
+        asyncio.run(notify_group_chat(msg))
+
+
+def execute_tend(strategy_address: str, strategy_name: str, network: str) -> None:
+    """Execute tend on a strategy via relayer in a background thread."""
+    _tend_executor.submit(tend_worker, strategy_address, strategy_name, network)
 
 
 def get_signer_balance() -> int:
@@ -90,14 +115,27 @@ def get_signer_balance() -> int:
         return 0
 
 
+def format_duration(seconds: int) -> str:
+    """Format seconds into a human-readable duration string."""
+    if seconds < 60:
+        return f"{seconds}s"
+    elif seconds < 3600:
+        mins = seconds // 60
+        secs = seconds % 60
+        return f"{mins}m {secs}s" if secs else f"{mins}m"
+    elif seconds < 86400:
+        hours = seconds // 3600
+        mins = (seconds % 3600) // 60
+        return f"{hours}h {mins}m" if mins else f"{hours}h"
+    else:
+        days = seconds // 86400
+        hours = (seconds % 86400) // 3600
+        return f"{days}d {hours}h" if hours else f"{days}d"
+
+
 def format_time_ago(seconds: int) -> str:
     """Format seconds into a human-readable time ago string."""
-    if seconds < 3600:
-        return f"{seconds // 60}m ago"
-    elif seconds < 86400:
-        return f"{seconds // 3600}h {(seconds % 3600) // 60}m ago"
-    else:
-        return f"{seconds // 86400}d {(seconds % 86400) // 3600}h ago"
+    return f"{format_duration(seconds)} ago"
 
 
 async def report_strategy(

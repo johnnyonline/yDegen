@@ -30,7 +30,7 @@ bot = SilverbackBot()
 
 STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "0 8 * * *")  # Daily at 8 AM UTC
 # STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "* * * * *")  # Every minute (for testing)
-ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "7200"))  # 2 hours default
+ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "3600"))  # 1 hours default
 MIN_SIGNER_BALANCE = int(os.getenv("MIN_SIGNER_BALANCE", str(5 * 10**16)))  # 0.05 ETH default
 BALANCE_CHECK_CRON = os.getenv("BALANCE_CHECK_CRON", "0 */5 * * *")  # Every 5 hours
 
@@ -84,7 +84,6 @@ async def check_tend_triggers(block: BlockAPI, context: Annotated[Context, Taski
 
     # Cache timestamp and block number
     now_ts = block.timestamp
-    block_number = block.number
 
     # Process results and notify if needed
     for strategy, (needs_tend, _data) in zip(current_strategies, results):
@@ -98,6 +97,8 @@ async def check_tend_triggers(block: BlockAPI, context: Annotated[Context, Taski
             continue
 
         strategy = Contract(strategy.address, abi="bot/abis/ITokenizedStrategy.json")  # Loading ABI manually
+        strategy_name = strategy.name()
+        network = chain.capitalize()
 
         # Update the timestamp in state
         state.setdefault("tend_alerts_ts", {})[strategy.address] = now_ts
@@ -105,20 +106,14 @@ async def check_tend_triggers(block: BlockAPI, context: Annotated[Context, Taski
 
         await notify_group_chat(
             f"🚨 <b>Strategy needs tending!</b>\n\n"
-            f"<b>Name:</b> {strategy.name()}\n"
-            f"<b>Network:</b> {chain.capitalize()}\n"
-            f"<b>Block Number:</b> {block_number}\n\n"
+            f"<b>Name:</b> {strategy_name}\n"
+            f"<b>Network:</b> {network}\n\n"
             f"<i>Attempting to tend...</i>\n"
             f"<i>Sleeping for {int(ALERT_COOLDOWN_SECONDS / 60)} minutes...</i>\n\n"
             f"<a href='{explorer_base_url()}{strategy.address}'>🔗 View Strategy</a>"
         )
 
-        tx_hash = execute_tend(strategy.address)
-        if tx_hash:
-            await notify_group_chat(
-                f"✅ <b>Tend tx submitted</b>\n\n"
-                f"<a href='{explorer_base_url().replace('/address/', '/tx/')}{tx_hash}'>🔗 View Transaction</a>"
-            )
+        execute_tend(strategy.address, strategy_name, network)
 
 
 # @bot.on_(chain.blocks)

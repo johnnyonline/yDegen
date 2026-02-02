@@ -63,14 +63,10 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "lender_borrowers": [],
         "liquity_lender_borrowers": {},
         "ybold": [
-            "0xe037A8F2Fa17293d94620c1846F84d047379660a",  # yUSND's WETH Strategy
-            "0x533337c57dFA768F4B4827048b320aa78D909D30",  # yUSND's wstETH Strategy
-            "0xDAbdD3BD55d55927847510703C0fd7Eb0Af98f52",  # yUSND's rETH Strategy
-            "0xAe55FbdC3Cce38464e6A7F23d19A143898451105",  # yUSND's rsETH Strategy
-            "0x0d350027AE6fa715f17ea413D053eab94432D730",  # yUSND's weETH Strategy
-            "0x013a32B271fA2e51D685CCbEc5493b02162075A2",  # yUSND's ARB Strategy
-            "0x38Bcb6856AD0f887Fe05DBE341B8FBd9bBb65cE9",  # yUSND's COMP Strategy
-            "0x15B89e3E1C19e76d6bBD39A7b7c1f2f83C9B3Afc",  # yUSND's tBTC Strategy
+            "0x46Fb8B6431e21959E0975C9F7230bE31baff3AC7",  # yUSND's WETH Strategy
+            "0x6B74B94359E1bF07c6E41292Bfd722B3F8f637C7",  # yUSND's wstETH Strategy
+            "0xE85D07b2B6fdd3979f802CB161B078212A6eE125",  # yUSND's rETH Strategy
+            "0x62B70a5Ef0c2cEEa4a2A85681fd0a9dC398F4439",  # yUSND's ARB Strategy
         ],
         "explorer": "https://arbiscan.io/address/",
         "relayer": "0xE0D19f6b240659da8E87ABbB73446E7B4346Baee",
