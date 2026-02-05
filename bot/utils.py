@@ -72,11 +72,12 @@ def tend_worker(strategy_address: str, strategy_name: str, network: str) -> None
     start_time = time.time()
     try:
         signer = get_signer()
-        if network.lower() == "ethereum":
-            with networks.ethereum.mainnet.use_provider(PRIVATE_RPC):
-                tx_hash = send_tend(strategy_address, signer)
-        else:
-            tx_hash = send_tend(strategy_address, signer)
+        # if network.lower() == "ethereum":
+        #     with networks.ethereum.mainnet.use_provider(PRIVATE_RPC):
+        #         tx_hash = send_tend(strategy_address, signer)
+        # else:
+        #     tx_hash = send_tend(strategy_address, signer)
+        tx_hash = send_tend(strategy_address, signer)
 
         elapsed = int(time.time() - start_time)
         if tx_hash:

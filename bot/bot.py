@@ -30,7 +30,7 @@ bot = SilverbackBot()
 
 STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "0 8 * * *")  # Daily at 8 AM UTC
 # STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "* * * * *")  # Every minute (for testing)
-ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "3600"))  # 1 hours default
+ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "600"))  # 10 minutes default
 MIN_SIGNER_BALANCE = int(os.getenv("MIN_SIGNER_BALANCE", str(5 * 10**16)))  # 0.05 ETH default
 BALANCE_CHECK_CRON = os.getenv("BALANCE_CHECK_CRON", "0 */5 * * *")  # Every 5 hours
 
