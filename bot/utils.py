@@ -59,9 +59,9 @@ def send_tend(strategy_address: str, signer: Any) -> str | None:
     relayer_contract = relayer()
     if not relayer_contract:
         return None
-    receipt = relayer_contract.tendStrategy(strategy_address, sender=signer, nonce=nonce, required_confirmations=0, max_base_fee="100 gwei", max_priority_fee="3 gwei", transaction_acceptance_timeout=1800)
+    receipt = relayer_contract.tendStrategy(strategy_address, sender=signer, nonce=nonce, gas_limit=5000000, required_confirmations=0, max_base_fee="100 gwei", max_priority_fee="3 gwei", transaction_acceptance_timeout=1800)
     # weth = Contract("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", abi="bot/abis/IERC20.json")
-    # receipt = weth.approve(strategy_address, 0, sender=signer, nonce=nonce, required_confirmations=0)
+    # receipt = weth.approve(strategy_address, 0, sender=signer, nonce=nonce, gas_limit=5000000, required_confirmations=0, max_base_fee="100 gwei", max_priority_fee="3 gwei", transaction_acceptance_timeout=1800)
     # max_base_fee="100 gwei", max_priority_fee="3 gwei", transaction_acceptance_timeout=1800
     return str(receipt.txn_hash)
 

@@ -7,10 +7,10 @@ networks:
 node:
   ethereum:
     mainnet:
-      transaction_acceptance_timeout: 1800  # 30 minutes
+      # transaction_acceptance_timeout: 1800  # 30 minutes
       gas_limit:
         auto:
-          multiplier: 2  # Multiply 2 times the result of eth_estimateGas
+          multiplier: 5  # Multiply 2 times the result of eth_estimateGas
       uri: "${ETH_RPC_URL}"
       ws_uri: "${ETH_WS_URL}"
     katana:
@@ -19,18 +19,18 @@ node:
 
   base:
     mainnet:
-      transaction_acceptance_timeout: 1800
-      gas_limit:
-        auto:
-          multiplier: 2
+      # transaction_acceptance_timeout: 1800
+      # gas_limit:
+      #   auto:
+      #     multiplier: 2
       uri: "${BASE_RPC_URL}"
       ws_uri: "${BASE_WS_URL}"
 
   arbitrum:
     mainnet:
-      transaction_acceptance_timeout: 1800
-      gas_limit:
-        auto:
-          multiplier: 2
+      # transaction_acceptance_timeout: 1800
+      # gas_limit:
+      #   auto:
+      #     multiplier: 2
       uri: "${ARB_RPC_URL}"
       ws_uri: "${ARB_WS_URL}"
