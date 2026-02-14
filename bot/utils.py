@@ -213,6 +213,12 @@ async def report_strategy(
     tend_status = tend_trigger_result[0]
     liquidation_threshold = collateral_factor / 1e16
 
+    # Get expected APR
+    try:
+        expected_apr = int(oracle.getStrategyApr(strategy.address, 0)) / 1e16
+    except Exception:
+        expected_apr = 0.0
+
     # Build message
     msg = (
         f"{random.choice(EMOJIS)} <b>{name}</b>\n\n"
@@ -220,7 +226,7 @@ async def report_strategy(
         f"<b>Target:</b> {liquidation_threshold * target_ltv_mult / 1e4:.1f}%\n"
         f"<b>Warning:</b> {liquidation_threshold * warning_ltv_mult / 1e4:.1f}%\n"
         f"<b>Liquidation:</b> {liquidation_threshold:.1f}%\n"
-        f"<b>Expected APR:</b> {int(oracle.getStrategyApr(strategy.address, 0)) / 1e16:.2f}%\n"
+        f"<b>Expected APR:</b> {expected_apr:.2f}%\n"
     )
 
     if is_liquity:
