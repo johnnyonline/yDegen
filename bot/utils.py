@@ -179,7 +179,7 @@ def _build_network_status(network_key: str) -> str | None:
             ltv_map[addr] = raw_ltv / 1e16
 
     # Build message
-    lines = [f"{random.choice(EMOJIS)} <b>{network_key.capitalize()}</b>\n"]
+    lines = [f"{random.choice(EMOJIS)} <b>{network_key.capitalize()}</b>"]
     for addr, name, (needs_tend, _) in zip(all_addrs, name_results, tend_results):
         line = f"<b>Name:</b> {name}\n"
         line += f"<b>Tend Trigger:</b> {needs_tend}"
