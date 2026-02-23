@@ -84,6 +84,13 @@ NETWORKS: Mapping[str, NetworkCfg] = {
     },
 }
 
+NETWORK_RPC_ENVS: Mapping[str, str] = {
+    "ethereum": "ETH_RPC_URL",
+    "base": "BASE_RPC_URL",
+    "arbitrum": "ARB_RPC_URL",
+    "katana": "KATANA_RPC_URL",
+}
+
 APR_ORACLE_ADDRESS = "0x1981AD9F44F2EA9aDd2dC4AD7D075c102C70aF92"
 
 

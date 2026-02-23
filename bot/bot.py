@@ -18,7 +18,7 @@ from bot.config import (
     liquity_lender_borrower_strategies,
     strategies,
 )
-from bot.tg import ERROR_GROUP_CHAT_ID, notify_group_chat
+from bot.tg import ERROR_GROUP_CHAT_ID, notify_group_chat, start_command_listener
 from bot.utils import execute_tend, get_signer_balance, load_state, report_strategy, save_state
 
 # =============================================================================
@@ -42,6 +42,8 @@ BALANCE_CHECK_CRON = os.getenv("BALANCE_CHECK_CRON", "0 */5 * * *")  # Every 5 h
 
 @bot.on_startup()  # type: ignore[untyped-decorator]
 async def bot_startup(startup_state: StateSnapshot) -> None:
+    if chain_key() == "ethereum":
+        start_command_listener()
     await notify_group_chat(
         f"🟢 <b>{chain_key()} yDegen bot started successfully</b>",
         chat_id=ERROR_GROUP_CHAT_ID,

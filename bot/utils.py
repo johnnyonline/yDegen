@@ -3,6 +3,7 @@ import os
 import random
 import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
 from typing import Any, cast
 
 from ape import Contract, accounts, networks
@@ -10,7 +11,14 @@ from ape.contracts.base import ContractInstance
 from ape_accounts import import_account_from_private_key
 from ape_ethereum import multicall
 
-from bot.config import EMOJIS, explorer_base_url, relayer
+from bot.config import (
+    EMOJIS,
+    NETWORK_RPC_ENVS,
+    NETWORKS,
+    chain_key,
+    explorer_base_url,
+    relayer,
+)
 from bot.tg import notify_group_chat
 
 PRIVATE_RPC = "https://rpc.mevblocker.io/noreverts"
@@ -59,7 +67,16 @@ def send_tend(strategy_address: str, signer: Any) -> str | None:
     relayer_contract = relayer()
     if not relayer_contract:
         return None
-    receipt = relayer_contract.tendStrategy(strategy_address, sender=signer, nonce=nonce, gas_limit=5000000, required_confirmations=0, max_base_fee="100 gwei", max_priority_fee="3 gwei", transaction_acceptance_timeout=1800)
+    receipt = relayer_contract.tendStrategy(
+        strategy_address,
+        sender=signer,
+        nonce=nonce,
+        gas_limit=5000000,
+        required_confirmations=0,
+        max_base_fee="100 gwei",
+        max_priority_fee="3 gwei",
+        transaction_acceptance_timeout=1800,
+    )
     # weth = Contract("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", abi="bot/abis/IERC20.json")
     # receipt = weth.approve(strategy_address, 0, sender=signer, nonce=nonce, gas_limit=5000000, required_confirmations=0, max_base_fee="100 gwei", max_priority_fee="3 gwei", transaction_acceptance_timeout=1800)
     # max_base_fee="100 gwei", max_priority_fee="3 gwei", transaction_acceptance_timeout=1800
@@ -115,6 +132,80 @@ def get_signer_balance() -> int:
         return int(signer.balance)
     except Exception:
         return 0
+
+
+def _get_network_provider(network_key: str) -> Any:
+    """Get a context manager for the given network's provider."""
+    rpc_url = os.getenv(NETWORK_RPC_ENVS.get(network_key, ""))
+    if not rpc_url:
+        return None
+    if network_key == chain_key():
+        return nullcontext()
+    if network_key == "katana":
+        return networks.ethereum.katana.use_provider(rpc_url)
+    return getattr(networks, network_key).mainnet.use_provider(rpc_url)
+
+
+def _build_network_status(network_key: str) -> str | None:
+    """Build status message for a single network."""
+    network_cfg = NETWORKS[network_key]
+    lb_addrs = list(network_cfg["lender_borrowers"])
+    liquity_addrs = list(network_cfg["liquity_lender_borrowers"].keys())
+    ybold_addrs = list(network_cfg["ybold"])
+    all_addrs = lb_addrs + liquity_addrs + ybold_addrs
+
+    if not all_addrs:
+        return None
+
+    lb_addr_set = set(lb_addrs + liquity_addrs)
+
+    # Multicall: tendTrigger + name for all strategies
+    tend_call = multicall.Call()
+    name_call = multicall.Call()
+    for addr in all_addrs:
+        tend_call.add(Contract(addr, abi="bot/abis/IBaseStrategy.json").tendTrigger)
+        name_call.add(Contract(addr, abi="bot/abis/ITokenizedStrategy.json").name)
+    tend_results = list(tend_call())
+    name_results = list(name_call())
+
+    # Multicall: LTV for lender borrower strategies only
+    ltv_map: dict[str, float] = {}
+    lb_all = lb_addrs + liquity_addrs
+    if lb_all:
+        ltv_call = multicall.Call()
+        for addr in lb_all:
+            ltv_call.add(Contract(addr, abi="bot/abis/ILenderBorrower.json").getCurrentLTV)
+        for addr, raw_ltv in zip(lb_all, list(ltv_call())):
+            ltv_map[addr] = raw_ltv / 1e16
+
+    # Build message
+    lines = [f"{random.choice(EMOJIS)} <b>{network_key.capitalize()}</b>\n"]
+    for addr, name, (needs_tend, _) in zip(all_addrs, name_results, tend_results):
+        line = f"<b>Name:</b> {name}\n"
+        line += f"<b>Tend Trigger:</b> {needs_tend}"
+        if addr in lb_addr_set:
+            line += f"\n<b>LTV:</b> {ltv_map.get(addr, 0.0):.1f}%"
+        lines.append(line)
+
+    return "\n\n".join(lines)
+
+
+def build_status_messages() -> list[str]:
+    """Build status messages (one per network) with tend triggers and LTVs."""
+    messages = []
+    for network_key in NETWORKS:
+        ctx = _get_network_provider(network_key)
+        if ctx is None:
+            continue
+        try:
+            with ctx:
+                msg = _build_network_status(network_key)
+                if msg:
+                    messages.append(msg)
+        except Exception as e:
+            messages.append(f"{random.choice(EMOJIS)} <b>{network_key.capitalize()}</b>\n\nFailed: {e}")
+
+    return messages
 
 
 def format_duration(seconds: int) -> str:
