@@ -48,7 +48,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         ],
         "explorer": "https://etherscan.io/address/",
         "relayer": "0x604e586F17cE106B64185A7a0d2c1Da5bAce711E",
-        "uptime_push_key": "uxRHNSd8lD",
+        "uptime_push_key": os.getenv("UPTIME_KUMA_KEY_ETHEREUM", ""),
     },
     "base": {
         "lender_borrowers": [
@@ -61,7 +61,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "ybold": [],
         "explorer": "https://basescan.org/address/",
         "relayer": "0x46679Ba8ce6473a9E0867c52b5A50ff97579740E",
-        "uptime_push_key": "",
+        "uptime_push_key": os.getenv("UPTIME_KUMA_KEY_BASE", ""),
     },
     "arbitrum": {
         "lender_borrowers": [],
@@ -74,7 +74,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         ],
         "explorer": "https://arbiscan.io/address/",
         "relayer": "0xE0D19f6b240659da8E87ABbB73446E7B4346Baee",
-        "uptime_push_key": "sffV7b7CDp",
+        "uptime_push_key": os.getenv("UPTIME_KUMA_KEY_ARBITRUM", ""),
     },
     "katana": {
         "lender_borrowers": [
@@ -86,7 +86,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "ybold": [],
         "explorer": "https://katanascan.com/address/",
         "relayer": "0xC29cbdcf5843f8550530cc5d627e1dd3007EF231",
-        "uptime_push_key": "7wwLLYNt1o",
+        "uptime_push_key": os.getenv("UPTIME_KUMA_KEY_KATANA", ""),
     },
 }
 
