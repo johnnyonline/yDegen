@@ -2,6 +2,7 @@ import itertools
 import os
 from datetime import datetime
 from typing import Annotated
+from urllib.request import urlopen
 
 from ape import Contract, chain
 from ape.api import BlockAPI
@@ -17,6 +18,7 @@ from bot.config import (
     liquity_coll_index,
     liquity_lender_borrower_strategies,
     strategies,
+    uptime_push_url,
 )
 from bot.tg import ERROR_GROUP_CHAT_ID, notify_group_chat, start_command_listener
 from bot.utils import execute_tend, get_signer_balance, load_state, report_strategy, save_state
@@ -33,6 +35,8 @@ STATUS_REPORT_CRON = os.getenv("STATUS_REPORT_CRON", "0 8 * * *")  # Daily at 8 
 ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "600"))  # 10 minutes default
 MIN_SIGNER_BALANCE = int(os.getenv("MIN_SIGNER_BALANCE", str(5 * 10**16)))  # 0.05 ETH default
 BALANCE_CHECK_CRON = os.getenv("BALANCE_CHECK_CRON", "0 */5 * * *")  # Every 5 hours
+UPTIME_PING_CRON = os.getenv("UPTIME_PING_CRON", "*/9 * * * *")  # Every 9 minutes
+# UPTIME_PING_CRON = os.getenv("UPTIME_PING_CRON", "* * * * *")  # Every 9 minutes
 
 
 # =============================================================================
@@ -216,3 +220,14 @@ async def check_signer_balance(time: datetime) -> None:
             f"<b>Network:</b> {chain_key().capitalize()}\n\n"
             f"<i>Checking again in 5 hours...</i>"
         )
+
+
+@bot.cron(UPTIME_PING_CRON)  # type: ignore[untyped-decorator]
+async def ping_uptime_monitor(time: datetime) -> None:
+    url = uptime_push_url()
+    if not url:
+        return
+    try:
+        urlopen(url, timeout=10)  # noqa: S310
+    except Exception as e:
+        print(f"Uptime ping failed: {e}")

@@ -1,3 +1,4 @@
+import os
 from collections.abc import Mapping, Sequence
 from typing import TypedDict, cast
 
@@ -18,6 +19,7 @@ class NetworkCfg(TypedDict):
     ybold: Sequence[str]
     explorer: str
     relayer: str | None
+    uptime_push_key: str
 
 
 NETWORKS: Mapping[str, NetworkCfg] = {
@@ -46,6 +48,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         ],
         "explorer": "https://etherscan.io/address/",
         "relayer": "0x604e586F17cE106B64185A7a0d2c1Da5bAce711E",
+        "uptime_push_key": "uxRHNSd8lD",
     },
     "base": {
         "lender_borrowers": [
@@ -58,6 +61,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "ybold": [],
         "explorer": "https://basescan.org/address/",
         "relayer": "0x46679Ba8ce6473a9E0867c52b5A50ff97579740E",
+        "uptime_push_key": "",
     },
     "arbitrum": {
         "lender_borrowers": [],
@@ -70,6 +74,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         ],
         "explorer": "https://arbiscan.io/address/",
         "relayer": "0xE0D19f6b240659da8E87ABbB73446E7B4346Baee",
+        "uptime_push_key": "sffV7b7CDp",
     },
     "katana": {
         "lender_borrowers": [
@@ -81,6 +86,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "ybold": [],
         "explorer": "https://katanascan.com/address/",
         "relayer": "0xC29cbdcf5843f8550530cc5d627e1dd3007EF231",
+        "uptime_push_key": "7wwLLYNt1o",
     },
 }
 
@@ -133,6 +139,14 @@ def strategies() -> list[ContractInstance]:
 
 def explorer_base_url() -> str:
     return cfg()["explorer"]
+
+
+def uptime_push_url() -> str | None:
+    host = os.getenv("UPTIME_KUMA_HOST", "")
+    key = cfg()["uptime_push_key"]
+    if not host or not key:
+        return None
+    return f"https://{host}/api/push/{key}?status=up&msg=OK&ping="
 
 
 def relayer() -> ContractInstance | None:
