@@ -32,6 +32,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
             "0x68D01e2915c39b85EFE691dbb87bF93C6194A4a0",  # Morpho WBTC/yvUSD Lender Borrower
             "0x9da810867E4AA706e02318Bf7869f8530af663ad",  # Morpho WBTC/yvUSDT-1 Lender Borrower
             "0xc5976A234574A7345EfcbB3B0AaF5F435355d2DB",  # Morpho OETH/yvUSDC-1 Lender Borrower
+            "0x0851eedf2A2EA59a5CB688FCC4697d624fcc0576",  # Aave WBTC/yvUSD Lender Borrower
         ],
         "liquity_lender_borrowers": {
             "0x2fFff76ee152164f4dEfc95fB0cf88528251aB9E": 2,  # Liquity rETH/BOLD Lender Borrower (collIndex=2)
