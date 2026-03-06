@@ -2,7 +2,7 @@ import itertools
 import os
 from datetime import datetime
 from typing import Annotated
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 from ape import Contract, chain
 from ape.api import BlockAPI
@@ -228,6 +228,7 @@ async def ping_uptime_monitor(time: datetime) -> None:
     if not url:
         return
     try:
-        urlopen(url, timeout=10)  # noqa: S310
+        req = Request(url, headers={"User-Agent": "ydegen-monitor-bot"})  # noqa: S310
+        urlopen(req, timeout=10)  # noqa: S310
     except Exception as e:
         print(f"Uptime ping failed: {e}")
