@@ -257,6 +257,9 @@ async def report_strategy(
     call.add(contract.asset)
     call.add(contract.borrowToken)
 
+    if not is_liquity:
+        call.add(contract.lenderVault)
+
     if is_liquity:
         call.add(contract.troveId)
         call.add(contract.TROVE_MANAGER)
@@ -284,6 +287,12 @@ async def report_strategy(
     token_call.add(borrow_token.decimals)
     token_call.add(borrow_token.symbol)
 
+    # For non-liquity, fetch lender vault max withdraw
+    if not is_liquity:
+        lender_vault_address = results[11]
+        lender_vault = Contract(lender_vault_address, abi="bot/abis/ILenderVault.json")
+        token_call.add(lender_vault.maxWithdraw, strategy.address, 0, [])
+
     # For liquity, also fetch trove data and debt in front
     if is_liquity:
         trove_id, trove_manager_address = results[11], results[12]
@@ -299,6 +308,11 @@ async def report_strategy(
     # Calculate values
     debt_formatted = balance_of_debt / (10**borrow_decimals)
     lent_formatted = balance_of_lent_assets / (10**borrow_decimals)
+
+    if not is_liquity:
+        lender_max_withdraw = token_results[2]
+        max_withdraw_formatted = lender_max_withdraw / (10**borrow_decimals)
+        max_withdraw_pct = (lender_max_withdraw / balance_of_lent_assets * 100) if balance_of_lent_assets > 0 else 0.0
     expected_profit = max(0, lent_formatted - debt_formatted)
     time_str = format_time_ago(now_ts - last_report)
     tend_status = tend_trigger_result[0]
@@ -319,6 +333,9 @@ async def report_strategy(
         f"<b>Liquidation:</b> {liquidation_threshold:.1f}%\n"
         f"<b>Expected APR:</b> {expected_apr:.2f}%\n"
     )
+
+    if not is_liquity:
+        msg += f"<b>Lender Max Withdraw:</b> {max_withdraw_formatted:,.2f} {borrow_symbol} ({max_withdraw_pct:.1f}%)\n"
 
     if is_liquity:
         trove_data = token_results[2]
