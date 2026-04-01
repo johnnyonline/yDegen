@@ -1,9 +1,5 @@
 x-common: &common
   build: .
-  volumes:
-    - .:/app
-    - /app/.venv
-  working_dir: /app
   env_file: .env
   restart: unless-stopped
 
@@ -11,43 +7,20 @@ services:
   eth-ydegen:
     <<: *common
     container_name: eth-ydegen
-    command: >
-      bash -lc "
-        uv venv --clear &&
-        . .venv/bin/activate &&
-        uv sync &&
-        silverback run --network :mainnet
-      "
+    environment:
+      NETWORK: ethereum
+      RPC_URL: ${ETH_RPC_URL}
 
-  # base-ydegen:
-  #   <<: *common
-  #   container_name: base-ydegen
-  #   command: >
-  #     bash -lc "
-  #       uv venv --clear &&
-  #       . .venv/bin/activate &&
-  #       uv sync &&
-  #       silverback run --network base:mainnet
-  #     "
-  
   arb-ydegen:
     <<: *common
     container_name: arb-ydegen
-    command: >
-      bash -lc "
-        uv venv --clear &&
-        . .venv/bin/activate &&
-        uv sync &&
-        silverback run --network arbitrum:mainnet
-      "
-  
+    environment:
+      NETWORK: arbitrum
+      RPC_URL: ${ARB_RPC_URL}
+
   katana-ydegen:
     <<: *common
     container_name: katana-ydegen
-    command: >
-      bash -lc "
-        uv venv --clear &&
-        . .venv/bin/activate &&
-        uv sync &&
-        silverback run --network ethereum:katana:node
-      "
+    environment:
+      NETWORK: katana
+      RPC_URL: ${KATANA_RPC_URL}

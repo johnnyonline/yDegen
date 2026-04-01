@@ -1,47 +1,84 @@
 import asyncio
 import os
+import random
 import threading
 
-from telegram import Bot, Update
+from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
+from tinybot import multicall
+from tinybot.tg import BOT_ACCESS_TOKEN, DEV_GROUP_CHAT_ID, GROUP_CHAT_ID
+from web3 import Web3
 
-BOT_ACCESS_TOKEN = os.getenv("BOT_ACCESS_TOKEN", "")
-if BOT_ACCESS_TOKEN == "":
-    raise RuntimeError("!BOT_ACCESS_TOKEN")
-
-GROUP_CHAT_ID = int(os.getenv("GROUP_CHAT_ID", "0"))
-if GROUP_CHAT_ID == 0:
-    raise RuntimeError("!GROUP_CHAT_ID")
-
-ERROR_GROUP_CHAT_ID = int(os.getenv("ERROR_GROUP_CHAT_ID", "0"))
-if ERROR_GROUP_CHAT_ID == 0:
-    raise RuntimeError("!ERROR_GROUP_CHAT_ID")
+from bot.config import (
+    BASE_STRATEGY_ABI,
+    EMOJIS,
+    LENDER_BORROWER_ABI,
+    NETWORK_RPC_ENVS,
+    NETWORKS,
+    TOKENIZED_STRATEGY_ABI,
+    w3_contract,
+)
 
 
-async def notify_group_chat(
-    text: str,
-    parse_mode: str = "HTML",
-    chat_id: int = GROUP_CHAT_ID,
-    disable_web_page_preview: bool = True,
-) -> None:
-    try:
-        bot = Bot(token=BOT_ACCESS_TOKEN)
-        await bot.send_message(
-            chat_id=chat_id,
-            text=text,
-            parse_mode=parse_mode,
-            disable_web_page_preview=disable_web_page_preview,
-        )
-    except Exception as e:
-        print(f"Failed to send message to group chat: {e}")
+def _get_w3(network_key: str) -> Web3 | None:
+    rpc_url = os.getenv(NETWORK_RPC_ENVS.get(network_key, ""), "")
+    if not rpc_url:
+        return None
+    return Web3(Web3.HTTPProvider(rpc_url))
+
+
+def _build_network_status(network_key: str) -> str | None:
+    w3 = _get_w3(network_key)
+    if not w3:
+        return None
+
+    network_cfg = NETWORKS[network_key]
+    lb_addrs = list(network_cfg["lender_borrowers"])
+    liquity_addrs = list(network_cfg["liquity_lender_borrowers"].keys())
+    ybold_addrs = list(network_cfg["ybold"])
+    all_addrs = lb_addrs + liquity_addrs + ybold_addrs
+
+    if not all_addrs:
+        return None
+
+    lb_addr_set = set(lb_addrs + liquity_addrs)
+
+    tend_results = multicall(w3, [w3_contract(w3, a, BASE_STRATEGY_ABI).functions.tendTrigger() for a in all_addrs])
+    name_results = multicall(w3, [w3_contract(w3, a, TOKENIZED_STRATEGY_ABI).functions.name() for a in all_addrs])
+
+    ltv_map: dict[str, float] = {}
+    lb_all = lb_addrs + liquity_addrs
+    if lb_all:
+        ltv_results = multicall(w3, [w3_contract(w3, a, LENDER_BORROWER_ABI).functions.getCurrentLTV() for a in lb_all])
+        for addr, raw_ltv in zip(lb_all, ltv_results):
+            ltv_map[addr] = raw_ltv / 1e16
+
+    lines = [f"{random.choice(EMOJIS)} <b>{network_key.capitalize()}</b>"]
+    for addr, name, (needs_tend, _) in zip(all_addrs, name_results, tend_results):
+        line = f"<b>Name:</b> {name}\n"
+        line += f"<b>Tend Trigger:</b> {needs_tend}"
+        if addr in lb_addr_set:
+            line += f"\n<b>LTV:</b> {ltv_map.get(addr, 0.0):.1f}%"
+        lines.append(line)
+
+    return "\n\n".join(lines)
+
+
+def build_status_messages() -> list[str]:
+    messages = []
+    for network_key in NETWORKS:
+        try:
+            msg = _build_network_status(network_key)
+            if msg:
+                messages.append(msg)
+        except Exception as e:
+            messages.append(f"{random.choice(EMOJIS)} <b>{network_key.capitalize()}</b>\n\nFailed: {e}")
+    return messages
 
 
 async def _status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /status command."""
-    if update.effective_chat is None or update.effective_chat.id != GROUP_CHAT_ID:
+    if update.effective_chat is None or update.effective_chat.id not in (GROUP_CHAT_ID, DEV_GROUP_CHAT_ID):
         return
-
-    from bot.utils import build_status_messages
 
     try:
         messages = build_status_messages()
@@ -56,8 +93,6 @@ async def _status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 
 def start_command_listener() -> None:
-    """Start Telegram command polling in a daemon thread."""
-
     def _run() -> None:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)

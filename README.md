@@ -1,5 +1,7 @@
 # yDegen
 
+Real-time monitoring of Yearn's riskier strategies, usually involving leverage.
+
 ## Installation
 
 1. **Clone the repository**
@@ -35,12 +37,12 @@
 
 Run:
 ```shell
-silverback run --network :mainnet
+python -u -m bot
 ```
 
 Run using docker compose:
 ```shell
-docker compose up -d
+docker compose up --build
 ```
 
 Stop docker compose:

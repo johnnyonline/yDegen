@@ -1,23 +1,23 @@
 [project]
 name = "ydegen"
-version = "0.1.0"
-description = "Real-time monitoring of Yearn’s riskier strategies, usually involving leverage"
+version = "0.2.0"
+description = "Real-time monitoring of Yearn's riskier strategies, usually involving leverage"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "ruff==0.14.11",
     "mypy==1.19.1",
-    "python-dotenv==1.2.0",
-    "python-telegram-bot==22.5",
-    "eth-ape==0.8.45",
-    "silverback==0.7.35",
-    "ape-etherscan==0.8.5",
+    "tinybot-eth==0.6.0",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["bot*"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
-lint.select = ["E", "F", "I", "W"]  # pycodestyle, pyflakes, isort, and warnings
+target-version = "py312"
+lint.select = ["E", "F", "I", "W"]
 fix = true
 exclude = ["__pypackages__"]
 lint.ignore = ['E501']
@@ -27,7 +27,6 @@ quote-style = "double"
 docstring-code-format = true
 
 [tool.mypy]
-mypy_path = "src"
 python_version = "3.12"
 ignore_missing_imports = true
 strict = true

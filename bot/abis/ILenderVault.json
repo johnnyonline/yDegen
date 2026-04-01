@@ -7,16 +7,6 @@
                 "name": "owner",
                 "type": "address",
                 "internalType": "address"
-            },
-            {
-                "name": "max_loss",
-                "type": "uint256",
-                "internalType": "uint256"
-            },
-            {
-                "name": "strategies",
-                "type": "address[]",
-                "internalType": "address[]"
             }
         ],
         "outputs": [

@@ -1,9 +1,11 @@
+import json
 import os
 from collections.abc import Mapping, Sequence
-from typing import TypedDict, cast
+from pathlib import Path
+from typing import Any, TypedDict
 
-from ape import Contract, chain
-from ape.contracts.base import ContractInstance
+from web3 import Web3
+from web3.contract import Contract
 
 # fmt: off
 EMOJIS = [
@@ -11,6 +13,32 @@ EMOJIS = [
     "🐑", "🐫", "🦒", "🐇", "🦔", "🐨", "🦦", "🦩", "🦭", "🐢", "🐳", "🐡",
 ]
 # fmt: on
+
+# =============================================================================
+# ABI Loading
+# =============================================================================
+
+_ABI_DIR = Path(__file__).parent / "abis"
+
+
+def load_abi(name: str) -> list[dict[str, Any]]:
+    with open(_ABI_DIR / name) as f:
+        return json.load(f)  # type: ignore[no-any-return]
+
+
+BASE_STRATEGY_ABI = load_abi("IBaseStrategy.json")
+TOKENIZED_STRATEGY_ABI = load_abi("ITokenizedStrategy.json")
+LENDER_BORROWER_ABI = load_abi("ILenderBorrower.json")
+ERC20_ABI = load_abi("IERC20.json")
+RELAYER_ABI = load_abi("IRelayer.json")
+APR_ORACLE_ABI = load_abi("IAprOracle.json")
+LENDER_VAULT_ABI = load_abi("ILenderVault.json")
+TROVE_MANAGER_ABI = load_abi("ITroveManager.json")
+DEBT_IN_FRONT_HELPER_ABI = load_abi("IDebtInFrontHelper.json")
+
+# =============================================================================
+# Network Configuration
+# =============================================================================
 
 
 class NetworkCfg(TypedDict):
@@ -25,14 +53,17 @@ class NetworkCfg(TypedDict):
 NETWORKS: Mapping[str, NetworkCfg] = {
     "ethereum": {
         "lender_borrowers": [
-            # "0x6dec370EfA894d48D8C55012B0Cd6f3C1C7C4616",  # Asymmetry tBTC Lender USDaf Borrower
             "0xf6151034BEc135059E5A6Ccff43317652960ad41",  # Curve WETH/crvUSD Lender Borrower
             "0xB3ef10D305A6CdbC5f19244de528d025F856EF6A",  # Curve wstETH/crvUSD Lender Borrower
             "0x5cee43aa4Beb43E114C50d2127b206a6b95F1151",  # Curve WBTC/crvUSD Lender Borrower
-            "0x68D01e2915c39b85EFE691dbb87bF93C6194A4a0",  # Morpho WBTC/yvUSD Lender Borrower
-            "0x9da810867E4AA706e02318Bf7869f8530af663ad",  # Morpho WBTC/yvUSDT-1 Lender Borrower
+            "0xcd89BdDA5D0b93E4c9f96841717D12F26805867F",  # Morpho cbBTC/Sentora RLUSD Lender Borrower
+            "0xd1645Ca9666B918dbF4f7aF267A41AccB36B6722",  # Morpho cbBTC/Sentora PYUSD Lender Borrower
             "0xc5976A234574A7345EfcbB3B0AaF5F435355d2DB",  # Morpho OETH/yvUSDC-1 Lender Borrower
-            "0x0851eedf2A2EA59a5CB688FCC4697d624fcc0576",  # Aave WBTC/yvUSD Lender Borrower
+            "0x52A52d224573fCBDD6e8353cE1D0591563Fc3Bb4",  # Aave v3 USDC/yvBTC Lender Borrower
+            "0x7D3536382805f01b3c8c88a9a2037466C1FEd424",  # Aave v3 cbBTC/yvUSD Lender Borrower
+            "0x3a36da4424906752c97532619757E232f4970a0f",  # Aave v3 cbBTC/ysPYUSD Lender Borrower
+            "0xCba881a129A8Fe951c5909bDeCe34184B06eCafB",  # Aave v3 cbBTC/ysRLUSD Lender Borrower
+            "0x64D67F70Fa1a6898485D69b5916E1ce1e494B026",  # Aave v3 cbBTC/ysUSDT Lender Borrower
         ],
         "liquity_lender_borrowers": {
             "0x2fFff76ee152164f4dEfc95fB0cf88528251aB9E": 2,  # Liquity rETH/BOLD Lender Borrower (collIndex=2)
@@ -52,12 +83,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "uptime_push_key": os.getenv("UPTIME_KUMA_KEY_ETHEREUM", ""),
     },
     "base": {
-        "lender_borrowers": [
-            # "0xfdB431E661372fA1146efB70bf120ECDed944a78",  # Moonwell USDC Lender WETH Borrower
-            # "0x945Df73d55557Ea23c0c35CD350d8DE3b745287E",  # Moonwell USDC Lender cbBTC Borrower
-            # "0x03c5AfF0cd5e40889d689fD9D9Caff286b1BD7Fb",  # Moonwell cbBTC Lender WETH Borrower
-            # "0xd89A4f020C8d256a2A4B0dC40B36Ee0b27680776",  # Moonwell cbETH Lender WETH Borrower
-        ],
+        "lender_borrowers": [],
         "liquity_lender_borrowers": {},
         "ybold": [],
         "explorer": "https://basescan.org/address/",
@@ -101,41 +127,17 @@ NETWORK_RPC_ENVS: Mapping[str, str] = {
 APR_ORACLE_ADDRESS = "0x1981AD9F44F2EA9aDd2dC4AD7D075c102C70aF92"
 
 
-def apr_oracle() -> ContractInstance:
-    return cast(ContractInstance, Contract(APR_ORACLE_ADDRESS, abi="bot/abis/IAprOracle.json"))
+# =============================================================================
+# Helpers
+# =============================================================================
 
 
-def chain_key() -> str:
-    network_name = chain.provider.network.name.lower()
-    # Check if it's a custom network (like katana) that exists in our config
-    if network_name in NETWORKS:
-        return cast(str, network_name)
-    # Otherwise fall back to ecosystem name (ethereum, base, arbitrum, etc.)
-    return cast(str, chain.provider.network.ecosystem.name.lower())
+def network() -> str:
+    return os.getenv("NETWORK", "ethereum")
 
 
 def cfg() -> NetworkCfg:
-    return NETWORKS.get(chain_key(), NETWORKS["ethereum"])
-
-
-def lender_borrower_strategies() -> list[ContractInstance]:
-    return [Contract(addr) for addr in cfg()["lender_borrowers"]]
-
-
-def liquity_lender_borrower_strategies() -> list[ContractInstance]:
-    return [Contract(addr) for addr in cfg()["liquity_lender_borrowers"].keys()]
-
-
-def liquity_coll_index(address: str) -> int:
-    return cfg()["liquity_lender_borrowers"][address]
-
-
-def ybold_strategies() -> list[ContractInstance]:
-    return [Contract(addr) for addr in cfg()["ybold"]]
-
-
-def strategies() -> list[ContractInstance]:
-    return lender_borrower_strategies() + liquity_lender_borrower_strategies() + ybold_strategies()
+    return NETWORKS.get(network(), NETWORKS["ethereum"])
 
 
 def explorer_base_url() -> str:
@@ -150,8 +152,37 @@ def uptime_push_url() -> str | None:
     return f"https://{host}/api/push/{key}?status=up&msg=OK&ping="
 
 
-def relayer() -> ContractInstance | None:
+def w3_contract(w3: Web3, address: str, abi: list[dict[str, Any]]) -> Contract:
+    return w3.eth.contract(address=Web3.to_checksum_address(address), abi=abi)
+
+
+def all_strategy_addrs() -> list[str]:
+    c = cfg()
+    return list(c["lender_borrowers"]) + list(c["liquity_lender_borrowers"].keys()) + list(c["ybold"])
+
+
+def lender_borrower_addrs() -> list[str]:
+    return list(cfg()["lender_borrowers"])
+
+
+def liquity_lender_borrower_map() -> dict[str, int]:
+    return dict(cfg()["liquity_lender_borrowers"])
+
+
+def liquity_coll_index(address: str) -> int:
+    return cfg()["liquity_lender_borrowers"][address]
+
+
+def ybold_addrs() -> list[str]:
+    return list(cfg()["ybold"])
+
+
+def apr_oracle(w3: Web3) -> Contract:
+    return w3_contract(w3, APR_ORACLE_ADDRESS, APR_ORACLE_ABI)
+
+
+def relayer(w3: Web3) -> Contract | None:
     addr = cfg()["relayer"]
     if not addr:
         return None
-    return cast(ContractInstance, Contract(addr, abi="bot/abis/IRelayer.json"))
+    return w3_contract(w3, addr, RELAYER_ABI)
