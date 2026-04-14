@@ -1,3 +1,4 @@
+import math
 import os
 import random
 import time
@@ -7,6 +8,7 @@ from tinybot import TinyBot, multicall, notify_group_chat
 from web3 import Web3
 
 from bot.config import (
+    AAVE_DATA_PROVIDER_ABI,
     APR_ORACLE_ABI,
     APR_ORACLE_ADDRESS,
     BASE_STRATEGY_ABI,
@@ -15,14 +17,21 @@ from bot.config import (
     ERC20_ABI,
     LENDER_BORROWER_ABI,
     LENDER_VAULT_ABI,
+    LOOPER_ABI,
+    MORPHO_ABI,
+    MORPHO_IRM_ABI,
     RELAYER_ABI,
     TOKENIZED_STRATEGY_ABI,
     TROVE_MANAGER_ABI,
+    aave_looper_addrs,
+    all_looper_addrs,
     all_strategy_addrs,
     cfg,
     explorer_base_url,
     lender_borrower_addrs,
     liquity_lender_borrower_map,
+    morpho_address,
+    morpho_looper_addrs,
     network,
     uptime_push_url,
     w3_contract,
@@ -136,9 +145,11 @@ async def report_status(bot: TinyBot) -> None:
     regular_addrs = lender_borrower_addrs()
     liquity_map = liquity_lender_borrower_map()
     liquity_addrs_set = set(liquity_map.keys())
-    all_addrs = regular_addrs + list(liquity_map.keys())
+    all_lb_addrs = regular_addrs + list(liquity_map.keys())
+    looper_addrs = all_looper_addrs()
+    morpho_set = {a.lower() for a in morpho_looper_addrs()}
 
-    if not all_addrs:
+    if not all_lb_addrs and not looper_addrs:
         return
 
     now_ts = int(time.time())
@@ -146,10 +157,14 @@ async def report_status(bot: TinyBot) -> None:
     explorer_url = explorer_base_url()
     oracle = w3_contract(w3, APR_ORACLE_ADDRESS, APR_ORACLE_ABI)
 
-    for addr in all_addrs:
+    for addr in all_lb_addrs:
         is_liquity = addr in liquity_addrs_set
         coll_index = liquity_map.get(addr, 0)
         await report_strategy(w3, addr, is_liquity, coll_index, now_ts, oracle, net, explorer_url)
+
+    for addr in looper_addrs:
+        is_morpho = addr.lower() in morpho_set
+        await report_looper(w3, addr, is_morpho, now_ts, net, explorer_url)
 
 
 async def report_strategy(
@@ -287,6 +302,168 @@ async def report_strategy(
     msg += (
         f"\n<b>Last Report:</b> {time_str}\n"
         f"<b>Tend Trigger:</b> {tend_status}\n"
+        f"<b>Network:</b> {network_name}\n\n"
+        f"<a href='{explorer_url}{address}'>🔗 View Strategy</a>"
+    )
+
+    await notify_group_chat(msg)
+
+
+async def report_looper(
+    w3: Web3,
+    address: str,
+    is_morpho: bool,
+    now_ts: int,
+    network_name: str,
+    explorer_url: str,
+) -> None:
+    addr = Web3.to_checksum_address(address)
+    looper = w3_contract(w3, address, LOOPER_ABI)
+
+    # Base multicall
+    calls = [
+        looper.functions.totalAssets(),
+        looper.functions.name(),
+        looper.functions.asset(),
+        looper.functions.collateralToken(),
+        looper.functions.estimatedTotalAssets(),
+        looper.functions.balanceOfCollateral(),
+        looper.functions.balanceOfAsset(),
+        looper.functions.position(),
+        looper.functions.getCurrentLTV(),
+        looper.functions.getCurrentLeverageRatio(),
+        looper.functions.targetLeverageRatio(),
+        looper.functions.leverageBuffer(),
+        looper.functions.maxLeverageRatio(),
+        looper.functions.getLiquidateCollateralFactor(),
+        looper.functions.minTendInterval(),
+        looper.functions.reportBuffer(),
+        looper.functions.lastTend(),
+        looper.functions.lastReport(),
+        looper.functions.tendTrigger(),
+    ]
+
+    if is_morpho:
+        calls.append(looper.functions.marketId())
+    else:
+        calls.append(looper.functions.DATA_PROVIDER())
+
+    results = multicall(w3, calls)
+
+    total_assets = results[0]
+    if total_assets == 0:
+        return
+
+    (
+        _,
+        name,
+        asset_addr,
+        collateral_addr,
+        estimated_assets,
+        collateral_amount,
+        idle_amount,
+        position_data,
+        current_ltv,
+        current_leverage,
+        target_leverage,
+        buffer,
+        max_leverage,
+        liquidation_ltv,
+        min_tend,
+        report_buffer,
+        last_tend,
+        last_report,
+        tend_trigger_result,
+    ) = results[:19]
+
+    collateral_value, position_debt = position_data[0], position_data[1]
+    trigger, reason = tend_trigger_result[0], tend_trigger_result[1]
+
+    # Token info multicall
+    asset_token = w3_contract(w3, asset_addr, ERC20_ABI)
+    collateral_token = w3_contract(w3, collateral_addr, ERC20_ABI)
+    token_results = multicall(
+        w3,
+        [
+            asset_token.functions.decimals(),
+            asset_token.functions.symbol(),
+            collateral_token.functions.decimals(),
+            collateral_token.functions.symbol(),
+        ],
+    )
+    asset_decimals, asset_symbol, collateral_decimals, collateral_symbol = token_results
+
+    asset_scale = 10**asset_decimals
+    collateral_scale = 10**collateral_decimals
+
+    # Borrow rate
+    borrow_rate_str = ""
+    if is_morpho:
+        market_id = results[19]
+        morpho = w3_contract(w3, morpho_address(), MORPHO_ABI)
+        try:
+            market_params = morpho.functions.idToMarketParams(market_id).call()
+            market_data = morpho.functions.market(market_id).call()
+            irm_addr = market_params[3]
+            irm = w3_contract(w3, irm_addr, MORPHO_IRM_ABI)
+            borrow_rate_wad = irm.functions.borrowRateView(market_params, market_data).call()
+            seconds_per_year = 365 * 24 * 60 * 60
+            rate_per_second = borrow_rate_wad / 1e18
+            apy = (math.exp(rate_per_second * seconds_per_year) - 1) * 100
+            borrow_rate_str = f"{apy:.2f}% APY"
+        except Exception as e:
+            borrow_rate_str = f"n/a ({e})"
+    else:
+        data_provider_addr = results[19]
+        try:
+            data_provider = w3_contract(w3, data_provider_addr, AAVE_DATA_PROVIDER_ABI)
+            reserve_data = data_provider.functions.getReserveData(Web3.to_checksum_address(asset_addr)).call()
+            variable_borrow_rate_ray = reserve_data[6]
+            seconds_per_year = 365 * 24 * 60 * 60
+            apr = (variable_borrow_rate_ray / 1e27) * 100
+            apy = ((1 + (variable_borrow_rate_ray / 1e27) / seconds_per_year) ** seconds_per_year - 1) * 100
+            borrow_rate_str = f"{apr:.2f}% APR ({apy:.2f}% APY)"
+        except Exception as e:
+            borrow_rate_str = f"n/a ({e})"
+
+    # Calculations
+    target_min = target_leverage - buffer if target_leverage > buffer else 0
+    target_max = target_leverage + buffer
+    report_discount_amount = collateral_value * report_buffer // 10_000 if report_buffer > 0 else 0
+    no_buffer_estimated_assets = estimated_assets + report_discount_amount
+
+    # Build message
+    venue = "Morpho" if is_morpho else "Aave"
+    msg = (
+        f"{random.choice(EMOJIS)} <b>{name}</b>\n\n"
+        f"<b>Venue:</b> {venue}\n"
+        f"<b>Collateral:</b> {collateral_symbol}\n"
+        f"<b>Borrowed:</b> {asset_symbol}\n\n"
+        f"<b>Total Assets:</b> {total_assets / asset_scale:,.4f} {asset_symbol}\n"
+        f"<b>Estimated Assets:</b> {estimated_assets / asset_scale:,.4f} {asset_symbol}\n"
+        f"<b>Idle Assets:</b> {idle_amount / asset_scale:,.4f} {asset_symbol}\n"
+        f"<b>Report Buffer:</b> {report_buffer / 100:.2f}%\n"
+    )
+    if report_buffer > 0:
+        msg += (
+            f"<b>No-Buffer Estimated:</b> {no_buffer_estimated_assets / asset_scale:,.4f} {asset_symbol} "
+            f"(discount {report_discount_amount / asset_scale:,.4f})\n"
+        )
+    msg += (
+        f"\n<b>Collateral:</b> {collateral_amount / collateral_scale:,.4f} {collateral_symbol}\n"
+        f"<b>Collateral Value:</b> {collateral_value / asset_scale:,.4f} {asset_symbol}\n"
+        f"<b>Debt:</b> {position_debt / asset_scale:,.4f} {asset_symbol}\n\n"
+        f"<b>Current LTV:</b> {current_ltv / 1e16:.2f}%\n"
+        f"<b>Liquidation LTV:</b> {liquidation_ltv / 1e16:.2f}%\n\n"
+        f"<b>Current Leverage:</b> {current_leverage / 1e18:.2f}x\n"
+        f"<b>Target Leverage:</b> {target_leverage / 1e18:.2f}x "
+        f"(range {target_min / 1e18:.2f}x - {target_max / 1e18:.2f}x)\n"
+        f"<b>Max Leverage:</b> {max_leverage / 1e18:.2f}x\n\n"
+        f"<b>Borrow Rate:</b> {borrow_rate_str}\n\n"
+        f"<b>Tend Trigger:</b> {trigger}\n"
+        f"<b>Min Tend Interval:</b> {min_tend // 60} min\n"
+        f"<b>Last Tend:</b> {format_time_ago(now_ts - last_tend)}\n"
+        f"<b>Last Report:</b> {format_time_ago(now_ts - last_report)}\n\n"
         f"<b>Network:</b> {network_name}\n\n"
         f"<a href='{explorer_url}{address}'>🔗 View Strategy</a>"
     )

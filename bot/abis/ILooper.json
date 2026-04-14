@@ -1,0 +1,23 @@
+[
+    {"type": "function", "name": "name", "inputs": [], "outputs": [{"type": "string"}], "stateMutability": "view"},
+    {"type": "function", "name": "asset", "inputs": [], "outputs": [{"type": "address"}], "stateMutability": "view"},
+    {"type": "function", "name": "totalAssets", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
+    {"type": "function", "name": "estimatedTotalAssets", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
+    {"type": "function", "name": "collateralToken", "inputs": [], "outputs": [{"type": "address"}], "stateMutability": "view"},
+    {"type": "function", "name": "balanceOfCollateral", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
+    {"type": "function", "name": "balanceOfAsset", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
+    {"type": "function", "name": "position", "inputs": [], "outputs": [{"type": "uint256"}, {"type": "uint256"}], "stateMutability": "view"},
+    {"type": "function", "name": "getCurrentLTV", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
+    {"type": "function", "name": "getCurrentLeverageRatio", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
+    {"type": "function", "name": "targetLeverageRatio", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
+    {"type": "function", "name": "leverageBuffer", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
+    {"type": "function", "name": "maxLeverageRatio", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
+    {"type": "function", "name": "getLiquidateCollateralFactor", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
+    {"type": "function", "name": "minTendInterval", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
+    {"type": "function", "name": "reportBuffer", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
+    {"type": "function", "name": "lastTend", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
+    {"type": "function", "name": "lastReport", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
+    {"type": "function", "name": "tendTrigger", "inputs": [], "outputs": [{"type": "bool"}, {"type": "bytes"}], "stateMutability": "view"},
+    {"type": "function", "name": "marketId", "inputs": [], "outputs": [{"type": "bytes32"}], "stateMutability": "view"},
+    {"type": "function", "name": "DATA_PROVIDER", "inputs": [], "outputs": [{"type": "address"}], "stateMutability": "view"}
+]

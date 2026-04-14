@@ -35,6 +35,10 @@ APR_ORACLE_ABI = load_abi("IAprOracle.json")
 LENDER_VAULT_ABI = load_abi("ILenderVault.json")
 TROVE_MANAGER_ABI = load_abi("ITroveManager.json")
 DEBT_IN_FRONT_HELPER_ABI = load_abi("IDebtInFrontHelper.json")
+LOOPER_ABI = load_abi("ILooper.json")
+MORPHO_ABI = load_abi("IMorpho.json")
+MORPHO_IRM_ABI = load_abi("IMorphoIRM.json")
+AAVE_DATA_PROVIDER_ABI = load_abi("IAaveDataProvider.json")
 
 # =============================================================================
 # Network Configuration
@@ -45,6 +49,9 @@ class NetworkCfg(TypedDict):
     lender_borrowers: Sequence[str]
     liquity_lender_borrowers: Mapping[str, int]  # address -> collIndex
     ybold: Sequence[str]
+    morpho_loopers: Sequence[str]
+    aave_loopers: Sequence[str]
+    morpho: str  # Morpho singleton address
     explorer: str
     relayer: str | None
     uptime_push_key: str
@@ -78,6 +85,21 @@ NETWORKS: Mapping[str, NetworkCfg] = {
             "0xb00a77045574f42b9Aff25dB275af4d5d25146bb",  # sUSDaf's tBTC Strategy
             "0x1d53B127629AF8df7da5488833a50c2F12692F5C",  # sUSDaf's WBTC18 Strategy
         ],
+        "morpho_loopers": [
+            "0x03b26cc31A241804a6C79F0d34B2ec4E1E792B68",  # wstETH/WETH Morpho
+            "0x5f9DBa2805411a8382FDb4E69d4f2Da8EFaF1F89",  # Infinifi sIUSD Morpho
+            "0x7bf1D269bf2CB79E628F51B93763B342fd059D1D",  # stcusd Jul 23 Morpho
+            "0xF28DC8B6DeD7E45F8cf84B9972487C8e1857A442",  # syrupusdc/usdc
+            "0x0da1f4b3752a163e8c39509b233f2365088e82aA",  # susds/usdt
+            "0xE4406F066a790e501ac1658aF2945dbbb2d2E74B",  # lbtc/wbtc
+        ],
+        "aave_loopers": [
+            "0xA0e0B2F2F28A7A9CB16F307582B247240BAc6db0",  # susde/usdt
+            "0xddCD9012d00d757C5261f028a20e2943f51A9ed8",  # wstETH/WETH
+            "0x2c1280922e7D913404760519e515fFC0B78A0bED",  # Spark wstETH/WETH
+            "0xC5E45AE7f641b8f95fcE60EB6ef991EbBd493Ba0",  # Aave v3 auction susde/usdc
+        ],
+        "morpho": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
         "explorer": "https://etherscan.io/address/",
         "relayer": "0x604e586F17cE106B64185A7a0d2c1Da5bAce711E",
         "uptime_push_key": os.getenv("UPTIME_KUMA_KEY_ETHEREUM", ""),
@@ -86,6 +108,9 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "lender_borrowers": [],
         "liquity_lender_borrowers": {},
         "ybold": [],
+        "morpho_loopers": [],
+        "aave_loopers": [],
+        "morpho": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
         "explorer": "https://basescan.org/address/",
         "relayer": "0x46679Ba8ce6473a9E0867c52b5A50ff97579740E",
         "uptime_push_key": os.getenv("UPTIME_KUMA_KEY_BASE", ""),
@@ -99,6 +124,11 @@ NETWORKS: Mapping[str, NetworkCfg] = {
             "0xE85D07b2B6fdd3979f802CB161B078212A6eE125",  # yUSND's rETH Strategy
             "0x62B70a5Ef0c2cEEa4a2A85681fd0a9dC398F4439",  # yUSND's ARB Strategy
         ],
+        "morpho_loopers": [
+            "0xBCf08997C34183d1b7B0f99e13aCeACFBA88E453",  # syrup/usdc
+        ],
+        "aave_loopers": [],
+        "morpho": "0x6c247b1F6182318877311737BaC0844bAa518F5e",
         "explorer": "https://arbiscan.io/address/",
         "relayer": "0xE0D19f6b240659da8E87ABbB73446E7B4346Baee",
         "uptime_push_key": os.getenv("UPTIME_KUMA_KEY_ARBITRUM", ""),
@@ -111,6 +141,9 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         ],
         "liquity_lender_borrowers": {},
         "ybold": [],
+        "morpho_loopers": [],
+        "aave_loopers": [],
+        "morpho": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
         "explorer": "https://katanascan.com/address/",
         "relayer": "0xC29cbdcf5843f8550530cc5d627e1dd3007EF231",
         "uptime_push_key": os.getenv("UPTIME_KUMA_KEY_KATANA", ""),
@@ -158,7 +191,13 @@ def w3_contract(w3: Web3, address: str, abi: list[dict[str, Any]]) -> Contract:
 
 def all_strategy_addrs() -> list[str]:
     c = cfg()
-    return list(c["lender_borrowers"]) + list(c["liquity_lender_borrowers"].keys()) + list(c["ybold"])
+    return (
+        list(c["lender_borrowers"])
+        + list(c["liquity_lender_borrowers"].keys())
+        + list(c["ybold"])
+        + list(c["morpho_loopers"])
+        + list(c["aave_loopers"])
+    )
 
 
 def lender_borrower_addrs() -> list[str]:
@@ -167,6 +206,22 @@ def lender_borrower_addrs() -> list[str]:
 
 def liquity_lender_borrower_map() -> dict[str, int]:
     return dict(cfg()["liquity_lender_borrowers"])
+
+
+def morpho_looper_addrs() -> list[str]:
+    return list(cfg()["morpho_loopers"])
+
+
+def aave_looper_addrs() -> list[str]:
+    return list(cfg()["aave_loopers"])
+
+
+def all_looper_addrs() -> list[str]:
+    return morpho_looper_addrs() + aave_looper_addrs()
+
+
+def morpho_address() -> str:
+    return cfg()["morpho"]
 
 
 def liquity_coll_index(address: str) -> int:

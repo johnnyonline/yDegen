@@ -13,6 +13,7 @@ from bot.config import (
     BASE_STRATEGY_ABI,
     EMOJIS,
     LENDER_BORROWER_ABI,
+    LOOPER_ABI,
     NETWORK_RPC_ENVS,
     NETWORKS,
     TOKENIZED_STRATEGY_ABI,
@@ -36,28 +37,35 @@ def _build_network_status(network_key: str) -> str | None:
     lb_addrs = list(network_cfg["lender_borrowers"])
     liquity_addrs = list(network_cfg["liquity_lender_borrowers"].keys())
     ybold_addrs = list(network_cfg["ybold"])
-    all_addrs = lb_addrs + liquity_addrs + ybold_addrs
+    looper_addrs = list(network_cfg["morpho_loopers"]) + list(network_cfg["aave_loopers"])
+    all_addrs = lb_addrs + liquity_addrs + ybold_addrs + looper_addrs
 
     if not all_addrs:
         return None
 
-    lb_addr_set = set(lb_addrs + liquity_addrs)
+    ltv_addrs = lb_addrs + liquity_addrs + looper_addrs
+    ltv_addr_set = set(ltv_addrs)
 
     tend_results = multicall(w3, [w3_contract(w3, a, BASE_STRATEGY_ABI).functions.tendTrigger() for a in all_addrs])
     name_results = multicall(w3, [w3_contract(w3, a, TOKENIZED_STRATEGY_ABI).functions.name() for a in all_addrs])
 
     ltv_map: dict[str, float] = {}
-    lb_all = lb_addrs + liquity_addrs
-    if lb_all:
-        ltv_results = multicall(w3, [w3_contract(w3, a, LENDER_BORROWER_ABI).functions.getCurrentLTV() for a in lb_all])
-        for addr, raw_ltv in zip(lb_all, ltv_results):
+    if ltv_addrs:
+        # Loopers use LOOPER_ABI; lender-borrowers use LENDER_BORROWER_ABI. Both have getCurrentLTV().
+        ltv_calls = []
+        looper_set = set(looper_addrs)
+        for a in ltv_addrs:
+            abi = LOOPER_ABI if a in looper_set else LENDER_BORROWER_ABI
+            ltv_calls.append(w3_contract(w3, a, abi).functions.getCurrentLTV())
+        ltv_results = multicall(w3, ltv_calls)
+        for addr, raw_ltv in zip(ltv_addrs, ltv_results):
             ltv_map[addr] = raw_ltv / 1e16
 
     lines = [f"{random.choice(EMOJIS)} <b>{network_key.capitalize()}</b>"]
     for addr, name, (needs_tend, _) in zip(all_addrs, name_results, tend_results):
         line = f"<b>Name:</b> {name}\n"
         line += f"<b>Tend Trigger:</b> {needs_tend}"
-        if addr in lb_addr_set:
+        if addr in ltv_addr_set:
             line += f"\n<b>LTV:</b> {ltv_map.get(addr, 0.0):.1f}%"
         lines.append(line)
 
