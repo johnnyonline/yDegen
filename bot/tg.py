@@ -1,13 +1,34 @@
 import asyncio
+import json
 import os
 import random
 import threading
+from urllib.request import Request, urlopen
 
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 from tinybot import multicall
 from tinybot.tg import BOT_ACCESS_TOKEN, DEV_GROUP_CHAT_ID, GROUP_CHAT_ID
 from web3 import Web3
+
+CHAIN_IDS: dict[str, int] = {
+    "ethereum": 1,
+    "base": 8453,
+    "arbitrum": 42161,
+    "katana": 747474,
+    "polygon": 137,
+}
+
+
+def _fetch_kong_snapshot(chain_id: int, vault_addr: str) -> dict | None:
+    """Fetch Yearn Kong snapshot for a vault. Returns None on any failure."""
+    url = f"https://kong.yearn.fi/api/rest/snapshot/{chain_id}/{vault_addr}"
+    try:
+        req = Request(url, headers={"User-Agent": "ydegen-monitor-bot"})  # noqa: S310
+        with urlopen(req, timeout=10) as resp:  # noqa: S310
+            return json.load(resp)  # type: ignore[no-any-return]
+    except Exception:
+        return None
 
 from bot.config import (
     BASE_STRATEGY_ABI,
@@ -228,53 +249,29 @@ def _build_network_exposure(network_key: str) -> list[str]:
         for v, idle in zip(multi_strategy_vaults, sym_results[len(asset_addrs):]):
             idle_map[v.lower()] = idle
 
-    # 6a. Multicall strategy names (one per unique strategy)
-    strategy_addr_list = list(strategy_addrs_set)
+    # 6. Pull strategy names + debts from Kong (one call per vault).
+    #    Composition includes both queued strategies (debt may be 0) and any orphan with non-zero debt.
     strategy_name_map: dict[str, str] = {}
-    if strategy_addr_list:
-        try:
-            name_results = multicall(
-                w3,
-                [w3_contract(w3, s, TOKENIZED_STRATEGY_ABI).functions.name() for s in strategy_addr_list],
-            )
-            for addr, n in zip(strategy_addr_list, name_results):
-                strategy_name_map[addr.lower()] = n
-        except Exception:
-            for addr in strategy_addr_list:
-                try:
-                    strategy_name_map[addr.lower()] = (
-                        w3_contract(w3, addr, TOKENIZED_STRATEGY_ABI).functions.name().call()
-                    )
-                except Exception:
-                    strategy_name_map[addr.lower()] = addr
-
-    # 6b. Multicall strategy.balanceOf(vault) for each (vault, strategy) pair
-    pairs: list[tuple[str, str]] = []
-    for i, vault_addr in enumerate(multi_strategy_vaults):
-        for s in strategies_per_vault[i]:
-            pairs.append((vault_addr, s))
-
     balance_map: dict[tuple[str, str], int] = {}
-    if pairs:
-        try:
-            bal_results = multicall(
-                w3,
-                [
-                    w3_contract(w3, s, TOKENIZED_STRATEGY_ABI).functions.balanceOf(Web3.to_checksum_address(v))
-                    for v, s in pairs
-                ],
-            )
-            for (v, s), bal in zip(pairs, bal_results):
-                balance_map[(v.lower(), s.lower())] = bal
-        except Exception:
-            # Fall back to per-pair direct calls so one bad strategy doesn't kill the whole batch
-            for v, s in pairs:
-                try:
-                    balance_map[(v.lower(), s.lower())] = (
-                        w3_contract(w3, s, TOKENIZED_STRATEGY_ABI).functions.balanceOf(Web3.to_checksum_address(v)).call()
-                    )
-                except Exception:
-                    balance_map[(v.lower(), s.lower())] = 0
+    extras_per_vault: list[list[tuple[str, int]]] = [[] for _ in multi_strategy_vaults]
+    chain_id = CHAIN_IDS.get(network_key)
+    if chain_id is not None:
+        for i, vault_addr in enumerate(multi_strategy_vaults):
+            queue_set = {s.lower() for s in strategies_per_vault[i]}
+            snapshot = _fetch_kong_snapshot(chain_id, vault_addr)
+            if not snapshot:
+                continue
+            for entry in snapshot.get("composition", []) or []:
+                addr = entry.get("address", "")
+                if not addr:
+                    continue
+                debt = int(str(entry.get("currentDebt", "0")))
+                ename = entry.get("name", addr)
+                strategy_name_map[addr.lower()] = ename
+                if addr.lower() in queue_set:
+                    balance_map[(vault_addr.lower(), addr.lower())] = debt
+                elif debt != 0:
+                    extras_per_vault[i].append((addr, debt))
 
     # 7. Build vault blocks (skip below threshold + name filters)
     blocks: list[str] = []
@@ -308,6 +305,11 @@ def _build_network_exposure(network_key: str) -> list[str]:
             s_amount = s_balance / scale
             strat_link = f"<a href='{explorer}{s}'>{sname}</a>"
             block += f"\n  ↳ {strat_link} — {s_amount:,.2f} {symbol}"
+        for extra_addr, extra_debt in extras_per_vault[i]:
+            ename = strategy_name_map.get(extra_addr.lower(), extra_addr)
+            e_amount = extra_debt / scale
+            elink = f"<a href='{explorer}{extra_addr}'>{ename}</a>"
+            block += f"\n  ↳ {elink} — {e_amount:,.2f} {symbol} <i>(not in default queue)</i>"
         blocks.append(block)
 
     if not blocks:
