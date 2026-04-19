@@ -529,6 +529,6 @@ async def run() -> None:
     bot.every(interval=BALANCE_CHECK_INTERVAL, handler=check_signer_balance)
     bot.every(interval=UPTIME_PING_INTERVAL, handler=ping_uptime_monitor)
 
-    # bot.cron(expression=STATUS_REPORT_CRON, handler=report_status)
+    bot.cron(expression=STATUS_REPORT_CRON, handler=report_status)
 
     await bot.run()
