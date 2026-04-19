@@ -39,6 +39,15 @@ LOOPER_ABI = load_abi("ILooper.json")
 MORPHO_ABI = load_abi("IMorpho.json")
 MORPHO_IRM_ABI = load_abi("IMorphoIRM.json")
 AAVE_DATA_PROVIDER_ABI = load_abi("IAaveDataProvider.json")
+REGISTRY_ABI = load_abi("IRegistry.json")
+VAULT_ABI = load_abi("IVault.json")
+
+# Yearn v3 registries (same address on all chains)
+REGISTRY_ADDRESSES = [
+    "0xd40ecF29e001c76Dcc4cC0D9cd50520CE845B038",
+    "0xff31A1B020c868F6eA3f61Eb953344920EeCA3af",
+]
+MULTI_STRATEGY_VAULT_TYPE = 1
 
 # =============================================================================
 # Network Configuration
@@ -148,6 +157,17 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "relayer": "0xC29cbdcf5843f8550530cc5d627e1dd3007EF231",
         "uptime_push_key": os.getenv("UPTIME_KUMA_KEY_KATANA", ""),
     },
+    "polygon": {
+        "lender_borrowers": [],
+        "liquity_lender_borrowers": {},
+        "ybold": [],
+        "morpho_loopers": [],
+        "aave_loopers": [],
+        "morpho": "",
+        "explorer": "https://polygonscan.com/address/",
+        "relayer": None,
+        "uptime_push_key": os.getenv("UPTIME_KUMA_KEY_POLYGON", ""),
+    },
 }
 
 NETWORK_RPC_ENVS: Mapping[str, str] = {
@@ -155,6 +175,7 @@ NETWORK_RPC_ENVS: Mapping[str, str] = {
     "base": "BASE_RPC_URL",
     "arbitrum": "ARB_RPC_URL",
     "katana": "KATANA_RPC_URL",
+    "polygon": "POL_RPC_URL",
 }
 
 APR_ORACLE_ADDRESS = "0x1981AD9F44F2EA9aDd2dC4AD7D075c102C70aF92"

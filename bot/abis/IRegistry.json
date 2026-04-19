@@ -1,0 +1,23 @@
+[
+    {
+        "type": "function",
+        "name": "getAllEndorsedVaults",
+        "inputs": [],
+        "outputs": [{"type": "address[][]"}],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "vaultInfo",
+        "inputs": [{"name": "_vault", "type": "address"}],
+        "outputs": [
+            {"name": "asset", "type": "address"},
+            {"name": "releaseVersion", "type": "uint96"},
+            {"name": "vaultType", "type": "uint64"},
+            {"name": "deploymentTimestamp", "type": "uint128"},
+            {"name": "index", "type": "uint64"},
+            {"name": "tag", "type": "string"}
+        ],
+        "stateMutability": "view"
+    }
+]

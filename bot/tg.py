@@ -12,11 +12,16 @@ from web3 import Web3
 from bot.config import (
     BASE_STRATEGY_ABI,
     EMOJIS,
+    ERC20_ABI,
     LENDER_BORROWER_ABI,
     LOOPER_ABI,
+    MULTI_STRATEGY_VAULT_TYPE,
     NETWORK_RPC_ENVS,
     NETWORKS,
+    REGISTRY_ABI,
+    REGISTRY_ADDRESSES,
     TOKENIZED_STRATEGY_ABI,
+    VAULT_ABI,
     w3_contract,
 )
 
@@ -24,14 +29,14 @@ from bot.config import (
 def _get_w3(network_key: str) -> Web3 | None:
     rpc_url = os.getenv(NETWORK_RPC_ENVS.get(network_key, ""), "")
     if not rpc_url:
-        return None
+        return []
     return Web3(Web3.HTTPProvider(rpc_url))
 
 
 def _build_network_status(network_key: str) -> str | None:
     w3 = _get_w3(network_key)
     if not w3:
-        return None
+        return []
 
     network_cfg = NETWORKS[network_key]
     lb_addrs = list(network_cfg["lender_borrowers"])
@@ -41,7 +46,7 @@ def _build_network_status(network_key: str) -> str | None:
     all_addrs = lb_addrs + liquity_addrs + ybold_addrs + looper_addrs
 
     if not all_addrs:
-        return None
+        return []
 
     ltv_addrs = lb_addrs + liquity_addrs + looper_addrs
     ltv_addr_set = set(ltv_addrs)
@@ -100,12 +105,252 @@ async def _status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text(msg, parse_mode="HTML", disable_web_page_preview=True)  # type: ignore[union-attr]
 
 
+def _chunk_messages(header: str, blocks: list[str], max_len: int = 3500) -> list[str]:
+    """Pack vault blocks into Telegram-sized messages, repeating the header per chunk."""
+    chunks = []
+    current = header
+    for block in blocks:
+        if len(current) + len(block) + 2 > max_len:
+            chunks.append(current)
+            current = header
+        current += "\n\n" + block
+    if current != header:
+        chunks.append(current)
+    return chunks
+
+
+# Min-amount thresholds by asset category. Symbols are matched lowercased.
+_STABLE_SYMBOLS = {
+    "usdc", "usdt", "dai", "usds", "usde", "susde", "frax", "lusd", "gho",
+    "rlusd", "pyusd", "bold", "crvusd", "usdaf", "usnd", "ysusd", "usdc.e",
+    "tusd", "yvusd", "yvbold", "vbUSDS", "vbUSDT",
+}
+_ETH_SYMBOLS = {
+    "weth", "eth", "steth", "wsteth", "reth", "cbeth", "frxeth", "sfrxeth",
+    "weeth", "ezeth", "oeth",
+}
+_BTC_SYMBOLS = {"wbtc", "cbbtc", "tbtc", "lbtc", "btc", "wbtc18", "vbwbtc"}
+
+
+def _min_amount(symbol: str) -> float:
+    s = symbol.lower()
+    if s in _STABLE_SYMBOLS:
+        return 5_000.0
+    if s in _ETH_SYMBOLS:
+        return 5.0
+    if s in _BTC_SYMBOLS:
+        return 0.5
+    return 0.0  # show unknown assets always
+
+
+def _build_network_exposure(network_key: str) -> list[str]:
+    w3 = _get_w3(network_key)
+    if not w3:
+        return []
+
+    explorer = NETWORKS[network_key]["explorer"]
+
+    # 1. Collect endorsed vaults from BOTH registries, tracking which registry knows each vault
+    vault_addrs: list[str] = []
+    registry_for_vault: dict[str, str] = {}
+    for registry_addr in REGISTRY_ADDRESSES:
+        registry = w3_contract(w3, registry_addr, REGISTRY_ABI)
+        try:
+            nested = registry.functions.getAllEndorsedVaults().call()
+            for sub in nested:
+                for a in sub:
+                    key = a.lower()
+                    if key not in registry_for_vault:
+                        registry_for_vault[key] = registry_addr
+                        vault_addrs.append(a)
+        except Exception:
+            continue
+
+    if not vault_addrs:
+        return []
+
+    # 2. Multicall vaultInfo against the registry that actually knows each vault
+    info_calls = []
+    for addr in vault_addrs:
+        reg_addr = registry_for_vault[addr.lower()]
+        registry = w3_contract(w3, reg_addr, REGISTRY_ABI)
+        info_calls.append(registry.functions.vaultInfo(Web3.to_checksum_address(addr)))
+    info_results = multicall(w3, info_calls)
+
+    multi_strategy_vaults: list[str] = []
+    for addr, info in zip(vault_addrs, info_results):
+        # info: (asset, releaseVersion, vaultType, deploymentTimestamp, index, tag)
+        try:
+            if info[2] == MULTI_STRATEGY_VAULT_TYPE:
+                multi_strategy_vaults.append(addr)
+        except Exception:
+            continue
+
+    if not multi_strategy_vaults:
+        return []
+
+    # 3. Multicall vault details: name, asset, totalAssets, decimals, get_default_queue
+    vault_calls = []
+    for addr in multi_strategy_vaults:
+        v = w3_contract(w3, addr, VAULT_ABI)
+        vault_calls.extend([
+            v.functions.name(),
+            v.functions.asset(),
+            v.functions.totalAssets(),
+            v.functions.decimals(),
+            v.functions.get_default_queue(),
+        ])
+    vault_results = multicall(w3, vault_calls)
+
+    # 4. Collect unique asset + strategy addresses
+    strategies_per_vault: list[list[str]] = []
+    asset_addrs: list[str] = []
+    strategy_addrs_set: set[str] = set()
+    for i in range(len(multi_strategy_vaults)):
+        base = i * 5
+        asset_addrs.append(vault_results[base + 1])
+        strategies = list(vault_results[base + 4])
+        strategies_per_vault.append(strategies)
+        for s in strategies:
+            strategy_addrs_set.add(s.lower())
+
+    # 5. Multicall asset symbols + idle (asset.balanceOf(vault)) per vault
+    asset_symbols: list[str] = []
+    idle_map: dict[str, int] = {}
+    if asset_addrs:
+        sym_calls = [w3_contract(w3, a, ERC20_ABI).functions.symbol() for a in asset_addrs]
+        idle_calls = [
+            w3_contract(w3, a, ERC20_ABI).functions.balanceOf(Web3.to_checksum_address(v))
+            for a, v in zip(asset_addrs, multi_strategy_vaults)
+        ]
+        sym_results = multicall(w3, sym_calls + idle_calls)
+        asset_symbols = sym_results[: len(asset_addrs)]
+        for v, idle in zip(multi_strategy_vaults, sym_results[len(asset_addrs):]):
+            idle_map[v.lower()] = idle
+
+    # 6a. Multicall strategy names (one per unique strategy)
+    strategy_addr_list = list(strategy_addrs_set)
+    strategy_name_map: dict[str, str] = {}
+    if strategy_addr_list:
+        try:
+            name_results = multicall(
+                w3,
+                [w3_contract(w3, s, TOKENIZED_STRATEGY_ABI).functions.name() for s in strategy_addr_list],
+            )
+            for addr, n in zip(strategy_addr_list, name_results):
+                strategy_name_map[addr.lower()] = n
+        except Exception:
+            for addr in strategy_addr_list:
+                try:
+                    strategy_name_map[addr.lower()] = (
+                        w3_contract(w3, addr, TOKENIZED_STRATEGY_ABI).functions.name().call()
+                    )
+                except Exception:
+                    strategy_name_map[addr.lower()] = addr
+
+    # 6b. Multicall strategy.balanceOf(vault) for each (vault, strategy) pair
+    pairs: list[tuple[str, str]] = []
+    for i, vault_addr in enumerate(multi_strategy_vaults):
+        for s in strategies_per_vault[i]:
+            pairs.append((vault_addr, s))
+
+    balance_map: dict[tuple[str, str], int] = {}
+    if pairs:
+        try:
+            bal_results = multicall(
+                w3,
+                [
+                    w3_contract(w3, s, TOKENIZED_STRATEGY_ABI).functions.balanceOf(Web3.to_checksum_address(v))
+                    for v, s in pairs
+                ],
+            )
+            for (v, s), bal in zip(pairs, bal_results):
+                balance_map[(v.lower(), s.lower())] = bal
+        except Exception:
+            # Fall back to per-pair direct calls so one bad strategy doesn't kill the whole batch
+            for v, s in pairs:
+                try:
+                    balance_map[(v.lower(), s.lower())] = (
+                        w3_contract(w3, s, TOKENIZED_STRATEGY_ABI).functions.balanceOf(Web3.to_checksum_address(v)).call()
+                    )
+                except Exception:
+                    balance_map[(v.lower(), s.lower())] = 0
+
+    # 7. Build vault blocks (skip below threshold + name filters)
+    blocks: list[str] = []
+    for i, vault_addr in enumerate(multi_strategy_vaults):
+        base = i * 5
+        name = vault_results[base]
+        total_assets = vault_results[base + 2]
+        decimals = vault_results[base + 3]
+        strategies = strategies_per_vault[i]
+        symbol = asset_symbols[i] if i < len(asset_symbols) else "?"
+        scale = 10**decimals
+
+        # Skip excluded families
+        if any(x in name for x in ("Liquid Locker Compounder", "Balancer", "yYB", "mkUSD", "yPRISMA-1")):
+            continue
+
+        # Only include known vault families
+        if not any(x in name for x in ("yVault", "BOLD", "USDaf")):
+            continue
+
+        amount = total_assets / scale
+        if amount < _min_amount(symbol):
+            continue
+
+        vault_link = f"<a href='{explorer}{vault_addr}'>{name}</a>"
+        idle_amount = idle_map.get(vault_addr.lower(), 0) / scale
+        block = f"📦 <b>{vault_link}</b> — {amount:,.2f} {symbol} ({idle_amount:,.2f} idle)"
+        for s in strategies:
+            sname = strategy_name_map.get(s.lower(), s)
+            s_balance = balance_map.get((vault_addr.lower(), s.lower()), 0)
+            s_amount = s_balance / scale
+            strat_link = f"<a href='{explorer}{s}'>{sname}</a>"
+            block += f"\n  ↳ {strat_link} — {s_amount:,.2f} {symbol}"
+        blocks.append(block)
+
+    if not blocks:
+        return []
+
+    header = f"{random.choice(EMOJIS)} <b>{network_key.capitalize()}</b>"
+    return _chunk_messages(header, blocks)
+
+
+def build_exposure_messages() -> list[str]:
+    messages = []
+    for network_key in NETWORKS:
+        try:
+            messages.extend(_build_network_exposure(network_key))
+        except Exception as e:
+            messages.append(f"{random.choice(EMOJIS)} <b>{network_key.capitalize()}</b>\n\nFailed: {e}")
+    return messages
+
+
+async def _exposure_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_chat is None or update.effective_chat.id not in (GROUP_CHAT_ID, DEV_GROUP_CHAT_ID):
+        return
+
+    try:
+        messages = build_exposure_messages()
+    except Exception as e:
+        messages = [f"Failed to fetch exposure: {e}"]
+
+    if not messages:
+        messages = ["No multi-strategy vaults found."]
+
+    for msg in messages:
+        await update.message.reply_text(msg, parse_mode="HTML", disable_web_page_preview=True)  # type: ignore[union-attr]
+        await asyncio.sleep(0.5)
+
+
 def start_command_listener() -> None:
     def _run() -> None:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         app = Application.builder().token(BOT_ACCESS_TOKEN).build()
         app.add_handler(CommandHandler("status", _status_command))
+        app.add_handler(CommandHandler("exposure", _exposure_command))
         loop.run_until_complete(app.initialize())
         loop.run_until_complete(app.updater.start_polling(drop_pending_updates=True))  # type: ignore[union-attr]
         loop.run_until_complete(app.start())
