@@ -75,7 +75,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
             "0xcd89BdDA5D0b93E4c9f96841717D12F26805867F",  # Morpho cbBTC/Sentora RLUSD Lender Borrower
             "0xd1645Ca9666B918dbF4f7aF267A41AccB36B6722",  # Morpho cbBTC/Sentora PYUSD Lender Borrower
             "0xc5976A234574A7345EfcbB3B0AaF5F435355d2DB",  # Morpho OETH/yvUSDC-1 Lender Borrower
-            "0x52A52d224573fCBDD6e8353cE1D0591563Fc3Bb4",  # Aave v3 USDC/yvBTC Lender Borrower
+            # "0x52A52d224573fCBDD6e8353cE1D0591563Fc3Bb4",  # Aave v3 USDC/yvBTC Lender Borrower
             "0x7D3536382805f01b3c8c88a9a2037466C1FEd424",  # Aave v3 cbBTC/yvUSD Lender Borrower
             "0x3a36da4424906752c97532619757E232f4970a0f",  # Aave v3 cbBTC/ysPYUSD Lender Borrower
             "0xCba881a129A8Fe951c5909bDeCe34184B06eCafB",  # Aave v3 cbBTC/ysRLUSD Lender Borrower
@@ -95,7 +95,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
             "0x1d53B127629AF8df7da5488833a50c2F12692F5C",  # sUSDaf's WBTC18 Strategy
         ],
         "morpho_loopers": [
-            "0x03b26cc31A241804a6C79F0d34B2ec4E1E792B68",  # wstETH/WETH Morpho
+            # "0x03b26cc31A241804a6C79F0d34B2ec4E1E792B68",  # wstETH/WETH Morpho
             "0x5f9DBa2805411a8382FDb4E69d4f2Da8EFaF1F89",  # Infinifi sIUSD Morpho
             "0x7bf1D269bf2CB79E628F51B93763B342fd059D1D",  # stcusd Jul 23 Morpho
             "0xF28DC8B6DeD7E45F8cf84B9972487C8e1857A442",  # syrupusdc/usdc
@@ -103,10 +103,10 @@ NETWORKS: Mapping[str, NetworkCfg] = {
             "0xE4406F066a790e501ac1658aF2945dbbb2d2E74B",  # lbtc/wbtc
         ],
         "aave_loopers": [
-            "0xA0e0B2F2F28A7A9CB16F307582B247240BAc6db0",  # susde/usdt
-            "0xddCD9012d00d757C5261f028a20e2943f51A9ed8",  # wstETH/WETH
+            # "0xA0e0B2F2F28A7A9CB16F307582B247240BAc6db0",  # susde/usdt
+            # "0xddCD9012d00d757C5261f028a20e2943f51A9ed8",  # wstETH/WETH
             "0x2c1280922e7D913404760519e515fFC0B78A0bED",  # Spark wstETH/WETH
-            "0xC5E45AE7f641b8f95fcE60EB6ef991EbBd493Ba0",  # Aave v3 auction susde/usdc
+            # "0xC5E45AE7f641b8f95fcE60EB6ef991EbBd493Ba0",  # Aave v3 auction susde/usdc
         ],
         "morpho": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
         "explorer": "https://etherscan.io/address/",
