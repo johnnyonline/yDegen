@@ -72,14 +72,14 @@ NETWORKS: Mapping[str, NetworkCfg] = {
             "0xf6151034BEc135059E5A6Ccff43317652960ad41",  # Curve WETH/crvUSD Lender Borrower
             "0xB3ef10D305A6CdbC5f19244de528d025F856EF6A",  # Curve wstETH/crvUSD Lender Borrower
             "0x5cee43aa4Beb43E114C50d2127b206a6b95F1151",  # Curve WBTC/crvUSD Lender Borrower
-            "0xcd89BdDA5D0b93E4c9f96841717D12F26805867F",  # Morpho cbBTC/Sentora RLUSD Lender Borrower
-            "0xd1645Ca9666B918dbF4f7aF267A41AccB36B6722",  # Morpho cbBTC/Sentora PYUSD Lender Borrower
+            # "0xcd89BdDA5D0b93E4c9f96841717D12F26805867F",  # Morpho cbBTC/Sentora RLUSD Lender Borrower
+            # "0xd1645Ca9666B918dbF4f7aF267A41AccB36B6722",  # Morpho cbBTC/Sentora PYUSD Lender Borrower
             "0xc5976A234574A7345EfcbB3B0AaF5F435355d2DB",  # Morpho OETH/yvUSDC-1 Lender Borrower
             # "0x52A52d224573fCBDD6e8353cE1D0591563Fc3Bb4",  # Aave v3 USDC/yvBTC Lender Borrower
-            "0x7D3536382805f01b3c8c88a9a2037466C1FEd424",  # Aave v3 cbBTC/yvUSD Lender Borrower
-            "0x3a36da4424906752c97532619757E232f4970a0f",  # Aave v3 cbBTC/ysPYUSD Lender Borrower
-            "0xCba881a129A8Fe951c5909bDeCe34184B06eCafB",  # Aave v3 cbBTC/ysRLUSD Lender Borrower
-            "0x64D67F70Fa1a6898485D69b5916E1ce1e494B026",  # Aave v3 cbBTC/ysUSDT Lender Borrower
+            # "0x7D3536382805f01b3c8c88a9a2037466C1FEd424",  # Aave v3 cbBTC/yvUSD Lender Borrower
+            # "0x3a36da4424906752c97532619757E232f4970a0f",  # Aave v3 cbBTC/ysPYUSD Lender Borrower
+            # "0xCba881a129A8Fe951c5909bDeCe34184B06eCafB",  # Aave v3 cbBTC/ysRLUSD Lender Borrower
+            # "0x64D67F70Fa1a6898485D69b5916E1ce1e494B026",  # Aave v3 cbBTC/ysUSDT Lender Borrower
         ],
         "liquity_lender_borrowers": {
             "0x2fFff76ee152164f4dEfc95fB0cf88528251aB9E": 2,  # Liquity rETH/BOLD Lender Borrower (collIndex=2)

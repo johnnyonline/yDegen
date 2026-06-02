@@ -124,7 +124,7 @@ async def execute_tend(bot: TinyBot, strategy_address: str, strategy_name: str, 
 
     relayer_contract = w3_contract(bot.w3, relayer_addr, RELAYER_ABI)
     call = relayer_contract.functions.tendStrategy(Web3.to_checksum_address(strategy_address))
-    tx_hash = bot.executor.execute(call, max_priority_fee_gwei=3, wait=0)
+    tx_hash = bot.executor.execute(call, max_fee_gwei=5, max_priority_fee_gwei=3, wait=0)
 
     explorer_tx = explorer_base_url().replace("/address/", "/tx/")
     await notify_group_chat(
@@ -529,6 +529,6 @@ async def run() -> None:
     bot.every(interval=BALANCE_CHECK_INTERVAL, handler=check_signer_balance)
     bot.every(interval=UPTIME_PING_INTERVAL, handler=ping_uptime_monitor)
 
-    bot.cron(expression=STATUS_REPORT_CRON, handler=report_status)
+    # bot.cron(expression=STATUS_REPORT_CRON, handler=report_status)
 
     await bot.run()
