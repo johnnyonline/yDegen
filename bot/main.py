@@ -124,7 +124,17 @@ async def execute_tend(bot: TinyBot, strategy_address: str, strategy_name: str, 
 
     relayer_contract = w3_contract(bot.w3, relayer_addr, RELAYER_ABI)
     call = relayer_contract.functions.tendStrategy(Web3.to_checksum_address(strategy_address))
-    tx_hash = bot.executor.execute(call, max_fee_gwei=5, max_priority_fee_gwei=3, wait=0)
+
+    # Node reserves gas_limit * maxFeePerGas. A fixed maxFeePerGas either over-reserves
+    # (high value -> "insufficient funds") or stalls when base fee climbs past it. Derive
+    # it from the live base fee: 2x headroom for inclusion + the priority tip.
+    priority_fee_gwei = 3 if network() == "ethereum" else 0.1
+    base_fee_gwei = bot.w3.eth.get_block("latest")["baseFeePerGas"] / 1e9
+    max_fee_gwei = base_fee_gwei * 2 + priority_fee_gwei
+
+    tx_hash = bot.executor.execute(
+        call, max_fee_gwei=max_fee_gwei, max_priority_fee_gwei=priority_fee_gwei, wait=0
+    )
 
     explorer_tx = explorer_base_url().replace("/address/", "/tx/")
     await notify_group_chat(
