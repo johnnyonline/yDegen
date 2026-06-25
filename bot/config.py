@@ -36,6 +36,7 @@ LENDER_VAULT_ABI = load_abi("ILenderVault.json")
 TROVE_MANAGER_ABI = load_abi("ITroveManager.json")
 DEBT_IN_FRONT_HELPER_ABI = load_abi("IDebtInFrontHelper.json")
 LOOPER_ABI = load_abi("ILooper.json")
+PAWN_BROKER_ABI = load_abi("IPawnBroker.json")
 MORPHO_ABI = load_abi("IMorpho.json")
 MORPHO_IRM_ABI = load_abi("IMorphoIRM.json")
 AAVE_DATA_PROVIDER_ABI = load_abi("IAaveDataProvider.json")
@@ -60,6 +61,8 @@ class NetworkCfg(TypedDict):
     ybold: Sequence[str]
     morpho_loopers: Sequence[str]
     aave_loopers: Sequence[str]
+    flex_loopers: Sequence[str]
+    pawnbroker_loopers: Sequence[str]
     morpho: str  # Morpho singleton address
     explorer: str
     relayer: str | None
@@ -82,17 +85,17 @@ NETWORKS: Mapping[str, NetworkCfg] = {
             # "0x64D67F70Fa1a6898485D69b5916E1ce1e494B026",  # Aave v3 cbBTC/ysUSDT Lender Borrower
         ],
         "liquity_lender_borrowers": {
-            "0x2fFff76ee152164f4dEfc95fB0cf88528251aB9E": 2,  # Liquity rETH/BOLD Lender Borrower (collIndex=2)
+            # "0x2fFff76ee152164f4dEfc95fB0cf88528251aB9E": 2,  # Liquity rETH/BOLD Lender Borrower (collIndex=2)
         },
         "ybold": [
             "0x2048A730f564246411415f719198d6f7c10A7961",  # yBOLD's WETH Strategy
             "0x46af61661B1e15DA5bFE40756495b7881F426214",  # yBOLD's wstETH Strategy
             "0x2351E217269A4a53a392bffE8195Efa1c502A1D2",  # yBOLD's rETH Strategy
-            "0xad7D5D31Ffcb96f6F719Bb78209019d3d09e6baa",  # sUSDaf's ysyBOLD Strategy
-            "0xF6516d45A1625a6d9d3479902a5CB4c8B79F1887",  # sUSDaf's sUSDS Strategy
-            "0x388095a341Bf5767d3d3B7093cd89A82B816B507",  # sUSDaf's sfrxETH Strategy
-            "0xb00a77045574f42b9Aff25dB275af4d5d25146bb",  # sUSDaf's tBTC Strategy
-            "0x1d53B127629AF8df7da5488833a50c2F12692F5C",  # sUSDaf's WBTC18 Strategy
+            # "0xad7D5D31Ffcb96f6F719Bb78209019d3d09e6baa",  # sUSDaf's ysyBOLD Strategy
+            # "0xF6516d45A1625a6d9d3479902a5CB4c8B79F1887",  # sUSDaf's sUSDS Strategy
+            # "0x388095a341Bf5767d3d3B7093cd89A82B816B507",  # sUSDaf's sfrxETH Strategy
+            # "0xb00a77045574f42b9Aff25dB275af4d5d25146bb",  # sUSDaf's tBTC Strategy
+            # "0x1d53B127629AF8df7da5488833a50c2F12692F5C",  # sUSDaf's WBTC18 Strategy
         ],
         "morpho_loopers": [
             # "0x03b26cc31A241804a6C79F0d34B2ec4E1E792B68",  # wstETH/WETH Morpho
@@ -101,12 +104,21 @@ NETWORKS: Mapping[str, NetworkCfg] = {
             "0xF28DC8B6DeD7E45F8cf84B9972487C8e1857A442",  # syrupusdc/usdc
             "0x0da1f4b3752a163e8c39509b233f2365088e82aA",  # susds/usdt
             "0xE4406F066a790e501ac1658aF2945dbbb2d2E74B",  # lbtc/wbtc
+            "0x8C8232Bdffc60BAb474CABa0245e63726e85Ce15",  # wOUSD/USDC
+            "0xF0FEC2602Dff25497D6a14b3113D0687b4c56741",  # siUSD/USDC
         ],
         "aave_loopers": [
             # "0xA0e0B2F2F28A7A9CB16F307582B247240BAc6db0",  # susde/usdt
             # "0xddCD9012d00d757C5261f028a20e2943f51A9ed8",  # wstETH/WETH
             "0x2c1280922e7D913404760519e515fFC0B78A0bED",  # Spark wstETH/WETH
             # "0xC5E45AE7f641b8f95fcE60EB6ef991EbBd493Ba0",  # Aave v3 auction susde/usdc
+            "0x68A14629cb07c74259f481382fE8b6cFD8970121",  # wstETH/WETH spark v3
+        ],
+        "flex_loopers": [
+            "0x255f538312331e2921387Ea18D901c84a9614f90",  # yvUSD/USDC Flex Looper
+        ],
+        "pawnbroker_loopers": [
+            "0xd362efC75Ef1879f37A900823495f402CfdB0986",  # stcUSD/USDC Pawn Broker Looper
         ],
         "morpho": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
         "explorer": "https://etherscan.io/address/",
@@ -119,6 +131,8 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "ybold": [],
         "morpho_loopers": [],
         "aave_loopers": [],
+        "flex_loopers": [],
+        "pawnbroker_loopers": [],
         "morpho": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
         "explorer": "https://basescan.org/address/",
         "relayer": "0x46679Ba8ce6473a9E0867c52b5A50ff97579740E",
@@ -137,6 +151,8 @@ NETWORKS: Mapping[str, NetworkCfg] = {
             "0xBCf08997C34183d1b7B0f99e13aCeACFBA88E453",  # syrup/usdc
         ],
         "aave_loopers": [],
+        "flex_loopers": [],
+        "pawnbroker_loopers": [],
         "morpho": "0x6c247b1F6182318877311737BaC0844bAa518F5e",
         "explorer": "https://arbiscan.io/address/",
         "relayer": "0xE0D19f6b240659da8E87ABbB73446E7B4346Baee",
@@ -144,14 +160,16 @@ NETWORKS: Mapping[str, NetworkCfg] = {
     },
     "katana": {
         "lender_borrowers": [
-            "0x0432337365d89c0D73f1D0Cb263791F8f1B98D43",  # Morpho vbWBTC/yvUSDC Lender Borrower
+            # "0x0432337365d89c0D73f1D0Cb263791F8f1B98D43",  # Morpho vbWBTC/yvUSDC Lender Borrower
             "0x3384246D42cAc0B8DD9BBDbE902A06D0814244f7",  # Morpho vbWBTC/yvUSDT Lender Borrower
-            "0x2F0b01d1F36FB2c72f7DEB441a2a262e655d6888",  # Morpho vbWETH/yvUSDC Lender Borrower
+            # "0x2F0b01d1F36FB2c72f7DEB441a2a262e655d6888",  # Morpho vbWETH/yvUSDC Lender Borrower
         ],
         "liquity_lender_borrowers": {},
         "ybold": [],
         "morpho_loopers": [],
         "aave_loopers": [],
+        "flex_loopers": [],
+        "pawnbroker_loopers": [],
         "morpho": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
         "explorer": "https://katanascan.com/address/",
         "relayer": "0xC29cbdcf5843f8550530cc5d627e1dd3007EF231",
@@ -163,6 +181,8 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "ybold": [],
         "morpho_loopers": [],
         "aave_loopers": [],
+        "flex_loopers": [],
+        "pawnbroker_loopers": [],
         "morpho": "",
         "explorer": "https://polygonscan.com/address/",
         "relayer": None,
@@ -218,6 +238,8 @@ def all_strategy_addrs() -> list[str]:
         + list(c["ybold"])
         + list(c["morpho_loopers"])
         + list(c["aave_loopers"])
+        + list(c["flex_loopers"])
+        + list(c["pawnbroker_loopers"])
     )
 
 
@@ -237,8 +259,16 @@ def aave_looper_addrs() -> list[str]:
     return list(cfg()["aave_loopers"])
 
 
+def flex_looper_addrs() -> list[str]:
+    return list(cfg()["flex_loopers"])
+
+
+def pawnbroker_looper_addrs() -> list[str]:
+    return list(cfg()["pawnbroker_loopers"])
+
+
 def all_looper_addrs() -> list[str]:
-    return morpho_looper_addrs() + aave_looper_addrs()
+    return morpho_looper_addrs() + aave_looper_addrs() + flex_looper_addrs() + pawnbroker_looper_addrs()
 
 
 def morpho_address() -> str:

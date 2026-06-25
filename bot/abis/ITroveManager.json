@@ -72,6 +72,55 @@
     },
     {
         "type": "function",
+        "name": "troves",
+        "inputs": [
+            {
+                "name": "_troveId",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "debt",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "coll",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "annualInterestRate",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "lastDebtUpdateTime",
+                "type": "uint64",
+                "internalType": "uint64"
+            },
+            {
+                "name": "lastInterestRateAdjTime",
+                "type": "uint64",
+                "internalType": "uint64"
+            },
+            {
+                "name": "owner",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "status",
+                "type": "uint8",
+                "internalType": "uint8"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
         "name": "getTroveStatus",
         "inputs": [
             {

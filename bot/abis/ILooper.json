@@ -19,5 +19,8 @@
     {"type": "function", "name": "lastReport", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
     {"type": "function", "name": "tendTrigger", "inputs": [], "outputs": [{"type": "bool"}, {"type": "bytes"}], "stateMutability": "view"},
     {"type": "function", "name": "marketId", "inputs": [], "outputs": [{"type": "bytes32"}], "stateMutability": "view"},
-    {"type": "function", "name": "DATA_PROVIDER", "inputs": [], "outputs": [{"type": "address"}], "stateMutability": "view"}
+    {"type": "function", "name": "DATA_PROVIDER", "inputs": [], "outputs": [{"type": "address"}], "stateMutability": "view"},
+    {"type": "function", "name": "troveId", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
+    {"type": "function", "name": "TROVE_MANAGER", "inputs": [], "outputs": [{"type": "address"}], "stateMutability": "view"},
+    {"type": "function", "name": "PAWN_BROKER", "inputs": [], "outputs": [{"type": "address"}], "stateMutability": "view"}
 ]

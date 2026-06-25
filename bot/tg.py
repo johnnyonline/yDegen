@@ -63,7 +63,12 @@ def _build_network_status(network_key: str) -> str | None:
     lb_addrs = list(network_cfg["lender_borrowers"])
     liquity_addrs = list(network_cfg["liquity_lender_borrowers"].keys())
     ybold_addrs = list(network_cfg["ybold"])
-    looper_addrs = list(network_cfg["morpho_loopers"]) + list(network_cfg["aave_loopers"])
+    looper_addrs = (
+        list(network_cfg["morpho_loopers"])
+        + list(network_cfg["aave_loopers"])
+        + list(network_cfg["flex_loopers"])
+        + list(network_cfg["pawnbroker_loopers"])
+    )
     all_addrs = lb_addrs + liquity_addrs + ybold_addrs + looper_addrs
 
     if not all_addrs:

@@ -20,6 +20,7 @@ from bot.config import (
     LOOPER_ABI,
     MORPHO_ABI,
     MORPHO_IRM_ABI,
+    PAWN_BROKER_ABI,
     RELAYER_ABI,
     TOKENIZED_STRATEGY_ABI,
     TROVE_MANAGER_ABI,
@@ -28,11 +29,13 @@ from bot.config import (
     all_strategy_addrs,
     cfg,
     explorer_base_url,
+    flex_looper_addrs,
     lender_borrower_addrs,
     liquity_lender_borrower_map,
     morpho_address,
     morpho_looper_addrs,
     network,
+    pawnbroker_looper_addrs,
     uptime_push_url,
     w3_contract,
 )
@@ -52,6 +55,7 @@ UPTIME_PING_INTERVAL = int(os.getenv("UPTIME_PING_INTERVAL", "540"))  # 9 minute
 DEBT_IN_FRONT_HELPER = "0x4bb5E28FDB12891369b560f2Fab3C032600677c6"
 MAX_UINT256 = 2**256 - 1
 TROVE_STATUS = ["Non Existent", "Active", "Closed By Owner", "Closed By Liquidation", "Zombie"]
+LOOPER_VENUE_LABELS = {"morpho": "Morpho", "aave": "Aave", "flex": "Flex", "pawnbroker": "Pawn Broker"}
 
 # Track pending tends: strategy_address -> nonce used
 _pending_tends: dict[str, int] = {}
@@ -158,6 +162,8 @@ async def report_status(bot: TinyBot) -> None:
     all_lb_addrs = regular_addrs + list(liquity_map.keys())
     looper_addrs = all_looper_addrs()
     morpho_set = {a.lower() for a in morpho_looper_addrs()}
+    flex_set = {a.lower() for a in flex_looper_addrs()}
+    pawn_set = {a.lower() for a in pawnbroker_looper_addrs()}
 
     if not all_lb_addrs and not looper_addrs:
         return
@@ -173,8 +179,15 @@ async def report_status(bot: TinyBot) -> None:
         await report_strategy(w3, addr, is_liquity, coll_index, now_ts, oracle, net, explorer_url)
 
     for addr in looper_addrs:
-        is_morpho = addr.lower() in morpho_set
-        await report_looper(w3, addr, is_morpho, now_ts, net, explorer_url)
+        if addr.lower() in morpho_set:
+            venue = "morpho"
+        elif addr.lower() in flex_set:
+            venue = "flex"
+        elif addr.lower() in pawn_set:
+            venue = "pawnbroker"
+        else:
+            venue = "aave"
+        await report_looper(w3, addr, venue, now_ts, oracle, net, explorer_url)
 
 
 async def report_strategy(
@@ -322,8 +335,9 @@ async def report_strategy(
 async def report_looper(
     w3: Web3,
     address: str,
-    is_morpho: bool,
+    venue: str,
     now_ts: int,
+    oracle: object,
     network_name: str,
     explorer_url: str,
 ) -> None:
@@ -353,10 +367,17 @@ async def report_looper(
         looper.functions.tendTrigger(),
     ]
 
-    if is_morpho:
+    if venue == "morpho":
         calls.append(looper.functions.marketId())
-    else:
+    elif venue == "aave":
         calls.append(looper.functions.DATA_PROVIDER())
+    elif venue == "flex":
+        # flex loopers borrow via a Liquity-style trove; fetch its id + manager for the rate
+        calls.append(looper.functions.troveId())
+        calls.append(looper.functions.TROVE_MANAGER())
+    elif venue == "pawnbroker":
+        # pawn broker loopers borrow from a PawnBroker; fetch its address for the rate
+        calls.append(looper.functions.PAWN_BROKER())
 
     results = multicall(w3, calls)
 
@@ -399,16 +420,18 @@ async def report_looper(
             asset_token.functions.symbol(),
             collateral_token.functions.decimals(),
             collateral_token.functions.symbol(),
+            oracle.functions.getStrategyApr(addr, 0),
         ],
     )
-    asset_decimals, asset_symbol, collateral_decimals, collateral_symbol = token_results
+    asset_decimals, asset_symbol, collateral_decimals, collateral_symbol, expected_apr_raw = token_results
+    expected_apr = expected_apr_raw / 1e16
 
     asset_scale = 10**asset_decimals
     collateral_scale = 10**collateral_decimals
 
-    # Borrow rate
+    # Borrow rate (venue-specific)
     borrow_rate_str = ""
-    if is_morpho:
+    if venue == "morpho":
         market_id = results[19]
         morpho = w3_contract(w3, morpho_address(), MORPHO_ABI)
         try:
@@ -423,7 +446,7 @@ async def report_looper(
             borrow_rate_str = f"{apy:.2f}% APY"
         except Exception as e:
             borrow_rate_str = f"n/a ({e})"
-    else:
+    elif venue == "aave":
         data_provider_addr = results[19]
         try:
             data_provider = w3_contract(w3, data_provider_addr, AAVE_DATA_PROVIDER_ABI)
@@ -435,6 +458,26 @@ async def report_looper(
             borrow_rate_str = f"{apr:.2f}% APR ({apy:.2f}% APY)"
         except Exception as e:
             borrow_rate_str = f"n/a ({e})"
+    elif venue == "flex":
+        # flex loopers borrow from a Liquity-style trove; the trove's annualInterestRate is the
+        # borrow rate, scaled by the borrow token's decimals (asset_scale).
+        trove_id, trove_manager_addr = results[19], results[20]
+        try:
+            trove_manager = w3_contract(w3, trove_manager_addr, TROVE_MANAGER_ABI)
+            trove = trove_manager.functions.troves(trove_id).call()
+            annual_interest_rate = trove[2]
+            borrow_rate_str = f"{annual_interest_rate / asset_scale * 100:.2f}% APR"
+        except Exception as e:
+            borrow_rate_str = f"n/a ({e})"
+    elif venue == "pawnbroker":
+        # pawn broker loopers borrow from a PawnBroker; rate() is the annualized rate in basis points
+        pawn_broker_addr = results[19]
+        try:
+            pawn_broker = w3_contract(w3, pawn_broker_addr, PAWN_BROKER_ABI)
+            rate_bps = pawn_broker.functions.rate().call()
+            borrow_rate_str = f"{rate_bps / 100:.2f}% APR"
+        except Exception as e:
+            borrow_rate_str = f"n/a ({e})"
 
     # Calculations
     target_min = target_leverage - buffer if target_leverage > buffer else 0
@@ -443,10 +486,10 @@ async def report_looper(
     no_buffer_estimated_assets = estimated_assets + report_discount_amount
 
     # Build message
-    venue = "Morpho" if is_morpho else "Aave"
+    venue_label = LOOPER_VENUE_LABELS.get(venue, venue.capitalize())
     msg = (
         f"{random.choice(EMOJIS)} <b>{name}</b>\n\n"
-        f"<b>Venue:</b> {venue}\n"
+        f"<b>Venue:</b> {venue_label}\n"
         f"<b>Collateral:</b> {collateral_symbol}\n"
         f"<b>Borrowed:</b> {asset_symbol}\n\n"
         f"<b>Total Assets:</b> {total_assets / asset_scale:,.4f} {asset_symbol}\n"
@@ -469,7 +512,8 @@ async def report_looper(
         f"<b>Target Leverage:</b> {target_leverage / 1e18:.2f}x "
         f"(range {target_min / 1e18:.2f}x - {target_max / 1e18:.2f}x)\n"
         f"<b>Max Leverage:</b> {max_leverage / 1e18:.2f}x\n\n"
-        f"<b>Borrow Rate:</b> {borrow_rate_str}\n\n"
+        f"<b>Borrow Rate:</b> {borrow_rate_str}\n"
+        f"<b>Expected APR:</b> {expected_apr:.2f}%\n\n"
         f"<b>Tend Trigger:</b> {trigger}\n"
         f"<b>Min Tend Interval:</b> {min_tend // 60} min\n"
         f"<b>Last Tend:</b> {format_time_ago(now_ts - last_tend)}\n"
