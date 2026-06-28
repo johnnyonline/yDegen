@@ -63,6 +63,7 @@ class NetworkCfg(TypedDict):
     aave_loopers: Sequence[str]
     flex_loopers: Sequence[str]
     pawnbroker_loopers: Sequence[str]
+    allocator_vaults: Sequence[str]  # Yearn v3 allocator vaults to broadcast deposit/withdraw/report events for
     morpho: str  # Morpho singleton address
     explorer: str
     relayer: str | None
@@ -120,6 +121,9 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "pawnbroker_loopers": [
             "0xd362efC75Ef1879f37A900823495f402CfdB0986",  # stcUSD/USDC Pawn Broker Looper
         ],
+        "allocator_vaults": [
+            "0x863687e4E9751b57F38b4B0ebA04744C72d0f7B8",  # yvFlexUSDC
+        ],
         "morpho": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
         "explorer": "https://etherscan.io/address/",
         "relayer": "0x604e586F17cE106B64185A7a0d2c1Da5bAce711E",
@@ -133,6 +137,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "aave_loopers": [],
         "flex_loopers": [],
         "pawnbroker_loopers": [],
+        "allocator_vaults": [],
         "morpho": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
         "explorer": "https://basescan.org/address/",
         "relayer": "0x46679Ba8ce6473a9E0867c52b5A50ff97579740E",
@@ -153,6 +158,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "aave_loopers": [],
         "flex_loopers": [],
         "pawnbroker_loopers": [],
+        "allocator_vaults": [],
         "morpho": "0x6c247b1F6182318877311737BaC0844bAa518F5e",
         "explorer": "https://arbiscan.io/address/",
         "relayer": "0xE0D19f6b240659da8E87ABbB73446E7B4346Baee",
@@ -170,6 +176,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "aave_loopers": [],
         "flex_loopers": [],
         "pawnbroker_loopers": [],
+        "allocator_vaults": [],
         "morpho": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
         "explorer": "https://katanascan.com/address/",
         "relayer": "0xC29cbdcf5843f8550530cc5d627e1dd3007EF231",
@@ -183,6 +190,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "aave_loopers": [],
         "flex_loopers": [],
         "pawnbroker_loopers": [],
+        "allocator_vaults": [],
         "morpho": "",
         "explorer": "https://polygonscan.com/address/",
         "relayer": None,
@@ -269,6 +277,10 @@ def pawnbroker_looper_addrs() -> list[str]:
 
 def all_looper_addrs() -> list[str]:
     return morpho_looper_addrs() + aave_looper_addrs() + flex_looper_addrs() + pawnbroker_looper_addrs()
+
+
+def allocator_vault_addrs() -> list[str]:
+    return list(cfg()["allocator_vaults"])
 
 
 def morpho_address() -> str:

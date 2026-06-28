@@ -2,6 +2,7 @@ import math
 import os
 import random
 import time
+from typing import Any
 from urllib.request import Request, urlopen
 
 from tinybot import TinyBot, multicall, notify_group_chat
@@ -24,9 +25,11 @@ from bot.config import (
     RELAYER_ABI,
     TOKENIZED_STRATEGY_ABI,
     TROVE_MANAGER_ABI,
+    VAULT_ABI,
     aave_looper_addrs,
     all_looper_addrs,
     all_strategy_addrs,
+    allocator_vault_addrs,
     cfg,
     explorer_base_url,
     flex_looper_addrs,
@@ -51,6 +54,7 @@ ALERT_COOLDOWN_SECONDS = int(os.getenv("TEND_TRIGGER_ALERT_COOLDOWN_SECONDS", "6
 MIN_SIGNER_BALANCE = int(os.getenv("MIN_SIGNER_BALANCE", str(5 * 10**16)))  # 0.05 ETH default
 BALANCE_CHECK_INTERVAL = int(os.getenv("BALANCE_CHECK_INTERVAL", "18000"))  # 5 hours default
 UPTIME_PING_INTERVAL = int(os.getenv("UPTIME_PING_INTERVAL", "540"))  # 9 minutes default
+VAULT_EVENT_POLL_INTERVAL = int(os.getenv("VAULT_EVENT_POLL_INTERVAL", "180"))  # 3 minutes default
 
 DEBT_IN_FRONT_HELPER = "0x4bb5E28FDB12891369b560f2Fab3C032600677c6"
 MAX_UINT256 = 2**256 - 1
@@ -562,6 +566,83 @@ async def ping_uptime_monitor(bot: TinyBot) -> None:
 
 
 # =============================================================================
+# Allocator Vault Event Monitoring
+# =============================================================================
+
+# vault address -> (vault_name, asset_symbol, asset_decimals, vault_decimals)
+_vault_meta_cache: dict[str, tuple[str, str, int, int]] = {}
+
+
+def _short_addr(addr: str) -> str:
+    return f"{addr[:6]}…{addr[-4:]}"
+
+
+def _vault_meta(w3: Web3, vault_address: str) -> tuple[str, str, int, int]:
+    key = vault_address.lower()
+    cached = _vault_meta_cache.get(key)
+    if cached is not None:
+        return cached
+    vault = w3_contract(w3, vault_address, VAULT_ABI)
+    name, asset_address, vault_decimals = multicall(
+        w3, [vault.functions.name(), vault.functions.asset(), vault.functions.decimals()]
+    )
+    asset = w3_contract(w3, asset_address, ERC20_ABI)
+    asset_symbol, asset_decimals = multicall(w3, [asset.functions.symbol(), asset.functions.decimals()])
+    meta = (name, asset_symbol, asset_decimals, vault_decimals)
+    _vault_meta_cache[key] = meta
+    return meta
+
+
+def _strategy_name(w3: Web3, address: str) -> str:
+    try:
+        return str(w3_contract(w3, address, TOKENIZED_STRATEGY_ABI).functions.name().call())
+    except Exception:
+        return _short_addr(address)
+
+
+async def on_vault_event(bot: TinyBot, log: Any) -> None:
+    w3 = bot.w3
+    name, asset_symbol, asset_decimals, vault_decimals = _vault_meta(w3, log["address"])
+    asset_scale = 10**asset_decimals
+    share_scale = 10**vault_decimals
+    net = network().capitalize()
+    explorer_tx = explorer_base_url().replace("/address/", "/tx/")
+    tx_link = f"<a href='{explorer_tx}{Web3.to_hex(log['transactionHash'])}'>🔗 View Transaction</a>"
+
+    event = log["event"]
+    args = log["args"]
+
+    if event == "Deposit":
+        msg = (
+            f"💰 <b>Deposit</b> — {name}\n\n"
+            f"<b>Owner:</b> {_short_addr(args['owner'])}\n"
+            f"<b>Assets:</b> {args['assets'] / asset_scale:,.2f} {asset_symbol}\n"
+            f"<b>Shares:</b> {args['shares'] / share_scale:,.2f}\n"
+            f"<b>Network:</b> {net}\n\n{tx_link}"
+        )
+    elif event == "Withdraw":
+        msg = (
+            f"💸 <b>Withdraw</b> — {name}\n\n"
+            f"<b>Owner:</b> {_short_addr(args['owner'])}\n"
+            f"<b>Assets:</b> {args['assets'] / asset_scale:,.2f} {asset_symbol}\n"
+            f"<b>Shares:</b> {args['shares'] / share_scale:,.2f}\n"
+            f"<b>Network:</b> {net}\n\n{tx_link}"
+        )
+    elif event == "StrategyReported":
+        msg = (
+            f"📊 <b>Report</b> — {name}\n\n"
+            f"<b>Strategy:</b> {_strategy_name(w3, args['strategy'])}\n"
+            f"<b>Gain:</b> {args['gain'] / asset_scale:,.2f} {asset_symbol}\n"
+            f"<b>Protocol Fees:</b> {args['protocol_fees'] / asset_scale:,.2f} {asset_symbol}\n"
+            f"<b>Network:</b> {net}\n\n{tx_link}"
+        )
+    else:
+        return
+
+    await notify_group_chat(msg)
+
+
+# =============================================================================
 # Entry Point
 # =============================================================================
 
@@ -584,5 +665,17 @@ async def run() -> None:
     bot.every(interval=UPTIME_PING_INTERVAL, handler=ping_uptime_monitor)
 
     bot.cron(expression=STATUS_REPORT_CRON, handler=report_status)
+
+    vault_addrs = allocator_vault_addrs()
+    if vault_addrs:
+        for event_name in ("Deposit", "Withdraw", "StrategyReported"):
+            bot.listen(
+                event=event_name,
+                addresses=vault_addrs,
+                abi=VAULT_ABI,
+                handler=on_vault_event,
+                name=f"vault_{event_name.lower()}",
+                poll_interval=VAULT_EVENT_POLL_INTERVAL,
+            )
 
     await bot.run()
