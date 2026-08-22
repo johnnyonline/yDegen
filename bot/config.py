@@ -73,6 +73,10 @@ class NetworkCfg(TypedDict):
 NETWORKS: Mapping[str, NetworkCfg] = {
     "ethereum": {
         "lender_borrowers": [
+            "0xfd2E20643CE740F0FE72ebC0328747bb415cf055",  # Aave v3 wstETH/yvUSD Lender Borrower
+            "0x5b53539965a3224A7197DF30bD5a75a4F779e479",  # Aave v3 WETH/yvUSD Lender Borrower
+            "0x880779354B2Ff8ae45B667630Cec309f945F0802",  # Spark wstETH/yvUSD Lender Borrower
+            "0x6Eb1047291f6c445e7Ab5deE6f0BF6B1aD5529FC",  # Spark WETH/yvUSD Lender Borrower
             # "0xf6151034BEc135059E5A6Ccff43317652960ad41",  # Curve WETH/crvUSD Lender Borrower
             # "0xB3ef10D305A6CdbC5f19244de528d025F856EF6A",  # Curve wstETH/crvUSD Lender Borrower
             # "0x5cee43aa4Beb43E114C50d2127b206a6b95F1151",  # Curve WBTC/crvUSD Lender Borrower
