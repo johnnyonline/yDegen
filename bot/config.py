@@ -75,8 +75,8 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "lender_borrowers": [
             "0xfd2E20643CE740F0FE72ebC0328747bb415cf055",  # Aave v3 wstETH/yvUSD Lender Borrower
             "0x5b53539965a3224A7197DF30bD5a75a4F779e479",  # Aave v3 WETH/yvUSD Lender Borrower
-            "0x880779354B2Ff8ae45B667630Cec309f945F0802",  # Spark wstETH/yvUSD Lender Borrower
-            "0x6Eb1047291f6c445e7Ab5deE6f0BF6B1aD5529FC",  # Spark WETH/yvUSD Lender Borrower
+            "0x41cfE42D221a591C6308Dcea419015Ba8570B380",  # Spark wstETH/yvUSD Lender Borrower
+            "0x5E8A9Acd00AdCED69b30D36929CbF7D4d4F9AE1F",  # Spark WETH/yvUSD Lender Borrower
             "0xc7B499ce6b3ae65e5CBC077ab3f3CEE155CcC0F8",  # Morpho wstETH/yvUSD
             "0x7079874f4659f8a093Daac6035b6c87383529B40",  # Morpho WETH/yvUSD
             # "0xf6151034BEc135059E5A6Ccff43317652960ad41",  # Curve WETH/crvUSD Lender Borrower
