@@ -129,6 +129,7 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         ],
         "allocator_vaults": [
             "0x863687e4E9751b57F38b4B0ebA04744C72d0f7B8",  # yvFlexUSDC
+            "0xfaC55fAFD0b55BFb8dD41F735EfCc195adA9891F",  # yvFlexWETH
         ],
         "morpho": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
         "explorer": "https://etherscan.io/address/",
