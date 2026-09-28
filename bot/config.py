@@ -64,6 +64,7 @@ class NetworkCfg(TypedDict):
     flex_loopers: Sequence[str]
     pawnbroker_loopers: Sequence[str]
     allocator_vaults: Sequence[str]  # Yearn v3 allocator vaults to broadcast deposit/withdraw/report events for
+    keepers: Mapping[str, str]  # keeper EOA -> label; gas balance is monitored alongside the bot signer
     morpho: str  # Morpho singleton address
     explorer: str
     relayer: str | None
@@ -131,6 +132,9 @@ NETWORKS: Mapping[str, NetworkCfg] = {
             "0x863687e4E9751b57F38b4B0ebA04744C72d0f7B8",  # yvFlexUSDC
             "0xfaC55fAFD0b55BFb8dD41F735EfCc195adA9891F",  # yvFlexWETH
         ],
+        "keepers": {
+            "0x283132390eA87D6ecc20255B59Ba94329eE17961": "TKS keeper",
+        },
         "morpho": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
         "explorer": "https://etherscan.io/address/",
         "relayer": "0x604e586F17cE106B64185A7a0d2c1Da5bAce711E",
@@ -145,6 +149,9 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "flex_loopers": [],
         "pawnbroker_loopers": [],
         "allocator_vaults": [],
+        "keepers": {
+            "0x283132390eA87D6ecc20255B59Ba94329eE17961": "TKS keeper",
+        },
         "morpho": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
         "explorer": "https://basescan.org/address/",
         "relayer": "0x46679Ba8ce6473a9E0867c52b5A50ff97579740E",
@@ -166,6 +173,9 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "flex_loopers": [],
         "pawnbroker_loopers": [],
         "allocator_vaults": [],
+        "keepers": {
+            "0x283132390eA87D6ecc20255B59Ba94329eE17961": "TKS keeper",
+        },
         "morpho": "0x6c247b1F6182318877311737BaC0844bAa518F5e",
         "explorer": "https://arbiscan.io/address/",
         "relayer": "0xE0D19f6b240659da8E87ABbB73446E7B4346Baee",
@@ -185,6 +195,9 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "flex_loopers": [],
         "pawnbroker_loopers": [],
         "allocator_vaults": [],
+        "keepers": {
+            "0x283132390eA87D6ecc20255B59Ba94329eE17961": "TKS keeper",
+        },
         "morpho": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
         "explorer": "https://katanascan.com/address/",
         "relayer": "0xC29cbdcf5843f8550530cc5d627e1dd3007EF231",
@@ -199,6 +212,9 @@ NETWORKS: Mapping[str, NetworkCfg] = {
         "flex_loopers": [],
         "pawnbroker_loopers": [],
         "allocator_vaults": [],
+        "keepers": {
+            "0x283132390eA87D6ecc20255B59Ba94329eE17961": "TKS keeper",
+        },
         "morpho": "",
         "explorer": "https://polygonscan.com/address/",
         "relayer": None,
@@ -289,6 +305,10 @@ def all_looper_addrs() -> list[str]:
 
 def allocator_vault_addrs() -> list[str]:
     return list(cfg()["allocator_vaults"])
+
+
+def keeper_map() -> dict[str, str]:
+    return dict(cfg()["keepers"])
 
 
 def morpho_address() -> str:

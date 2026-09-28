@@ -33,6 +33,7 @@ from bot.config import (
     cfg,
     explorer_base_url,
     flex_looper_addrs,
+    keeper_map,
     lender_borrower_addrs,
     liquity_lender_borrower_map,
     morpho_address,
@@ -535,17 +536,27 @@ async def report_looper(
 
 
 async def check_signer_balance(bot: TinyBot) -> None:
-    if not bot.executor:
+    signers: dict[str, str] = {bot.executor.address: "Bot"} if bot.executor else {}
+    signers.update(keeper_map())
+    if not signers:
         return
-    balance = bot.executor.balance
+
     min_balance = MIN_SIGNER_BALANCE if network() == "ethereum" else MIN_SIGNER_BALANCE // 10
-    if balance < min_balance:
+    net = network().capitalize()
+    explorer_url = explorer_base_url()
+
+    for addr, label in signers.items():
+        balance = bot.w3.eth.get_balance(Web3.to_checksum_address(addr))
+        if balance >= min_balance:
+            continue
         await notify_group_chat(
             f"⚠️ <b>Low signer balance!</b>\n\n"
+            f"<b>Signer:</b> {label}\n"
             f"<b>Balance:</b> {balance / 1e18:.4f} ETH\n"
             f"<b>Minimum:</b> {min_balance / 1e18:.4f} ETH\n"
-            f"<b>Network:</b> {network().capitalize()}\n\n"
-            f"<i>Checking again in {BALANCE_CHECK_INTERVAL // 3600} hours...</i>"
+            f"<b>Network:</b> {net}\n\n"
+            f"<i>Checking again in {BALANCE_CHECK_INTERVAL // 3600} hours...</i>\n\n"
+            f"<a href='{explorer_url}{addr}'>🔗 View Address</a>"
         )
 
 
