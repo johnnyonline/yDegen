@@ -24,3 +24,17 @@ services:
     environment:
       NETWORK: katana
       RPC_URL: ${KATANA_RPC_URL}
+
+  base-ydegen:
+    <<: *common
+    container_name: base-ydegen
+    environment:
+      NETWORK: base
+      RPC_URL: ${BASE_RPC_URL}
+
+  pol-ydegen:
+    <<: *common
+    container_name: pol-ydegen
+    environment:
+      NETWORK: polygon
+      RPC_URL: ${POL_RPC_URL}
