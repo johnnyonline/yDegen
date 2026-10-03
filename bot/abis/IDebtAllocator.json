@@ -1,0 +1,4 @@
+[
+    {"type": "function", "name": "shouldUpdateDebt", "inputs": [{"name": "_vault", "type": "address"}, {"name": "_strategy", "type": "address"}], "outputs": [{"name": "shouldUpdateDebt", "type": "bool"}, {"name": "extra", "type": "bytes"}], "stateMutability": "view"},
+    {"type": "function", "name": "keepers", "inputs": [{"name": "", "type": "address"}], "outputs": [{"name": "", "type": "bool"}], "stateMutability": "view"}
+]

@@ -16,7 +16,7 @@ CHAIN_IDS: dict[str, int] = {
     "base": 8453,
     "arbitrum": 42161,
     "katana": 747474,
-    "polygon": 137,
+    "optimism": 10,
 }
 
 
@@ -24,7 +24,7 @@ def _fetch_kong_snapshot(chain_id: int, vault_addr: str) -> dict | None:
     """Fetch Yearn Kong snapshot for a vault. Returns None on any failure."""
     url = f"https://kong.yearn.fi/api/rest/snapshot/{chain_id}/{vault_addr}"
     try:
-        req = Request(url, headers={"User-Agent": "ydegen-monitor-bot"})  # noqa: S310
+        req = Request(url, headers={"User-Agent": "vaults-mommy"})  # noqa: S310
         with urlopen(req, timeout=10) as resp:  # noqa: S310
             return json.load(resp)  # type: ignore[no-any-return]
     except Exception:

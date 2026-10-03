@@ -4,37 +4,37 @@ x-common: &common
   restart: unless-stopped
 
 services:
-  eth-ydegen:
+  eth-vaults-mommy:
     <<: *common
-    container_name: eth-ydegen
+    container_name: eth-vaults-mommy
     environment:
       NETWORK: ethereum
       RPC_URL: ${ETH_RPC_URL}
 
-  arb-ydegen:
+  arb-vaults-mommy:
     <<: *common
-    container_name: arb-ydegen
+    container_name: arb-vaults-mommy
     environment:
       NETWORK: arbitrum
       RPC_URL: ${ARB_RPC_URL}
 
-  katana-ydegen:
+  katana-vaults-mommy:
     <<: *common
-    container_name: katana-ydegen
+    container_name: katana-vaults-mommy
     environment:
       NETWORK: katana
       RPC_URL: ${KATANA_RPC_URL}
 
-  base-ydegen:
+  base-vaults-mommy:
     <<: *common
-    container_name: base-ydegen
+    container_name: base-vaults-mommy
     environment:
       NETWORK: base
       RPC_URL: ${BASE_RPC_URL}
 
-  pol-ydegen:
+  op-vaults-mommy:
     <<: *common
-    container_name: pol-ydegen
+    container_name: op-vaults-mommy
     environment:
-      NETWORK: polygon
-      RPC_URL: ${POL_RPC_URL}
+      NETWORK: optimism
+      RPC_URL: ${OP_RPC_URL}

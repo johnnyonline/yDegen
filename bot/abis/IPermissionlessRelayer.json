@@ -1,0 +1,5 @@
+[
+    {"type": "function", "name": "tend", "inputs": [{"name": "_strategy", "type": "address"}], "outputs": [], "stateMutability": "nonpayable"},
+    {"type": "function", "name": "report", "inputs": [{"name": "_strategy", "type": "address"}], "outputs": [{"name": "profit", "type": "uint256"}, {"name": "loss", "type": "uint256"}], "stateMutability": "nonpayable"},
+    {"type": "function", "name": "process_report", "inputs": [{"name": "_vault", "type": "address"}, {"name": "_strategy", "type": "address"}], "outputs": [{"name": "", "type": "uint256"}, {"name": "", "type": "uint256"}], "stateMutability": "nonpayable"}
+]

@@ -1,0 +1,3 @@
+[
+    {"type": "function", "name": "getDebtAllocator", "inputs": [], "outputs": [{"name": "", "type": "address"}], "stateMutability": "view"}
+]

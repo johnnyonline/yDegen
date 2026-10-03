@@ -1,0 +1,5 @@
+[
+    {"type": "function", "name": "strategyReportTrigger", "inputs": [{"name": "_strategy", "type": "address"}], "outputs": [{"name": "triggered", "type": "bool"}, {"name": "extra", "type": "bytes"}], "stateMutability": "view"},
+    {"type": "function", "name": "vaultReportTrigger", "inputs": [{"name": "_vault", "type": "address"}, {"name": "_strategy", "type": "address"}], "outputs": [{"name": "triggered", "type": "bool"}, {"name": "extra", "type": "bytes"}], "stateMutability": "view"},
+    {"type": "function", "name": "isCurrentBaseFeeAcceptable", "inputs": [], "outputs": [{"name": "", "type": "bool"}], "stateMutability": "view"}
+]

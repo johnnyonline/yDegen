@@ -4,6 +4,9 @@
     {"type": "function", "name": "totalAssets", "inputs": [], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
     {"type": "function", "name": "decimals", "inputs": [], "outputs": [{"type": "uint8"}], "stateMutability": "view"},
     {"type": "function", "name": "get_default_queue", "inputs": [], "outputs": [{"type": "address[]"}], "stateMutability": "view"},
+    {"type": "function", "name": "roles", "inputs": [{"name": "arg0", "type": "address"}], "outputs": [{"type": "uint256"}], "stateMutability": "view"},
+    {"type": "function", "name": "role_manager", "inputs": [], "outputs": [{"type": "address"}], "stateMutability": "view"},
+    {"type": "function", "name": "strategies", "inputs": [{"name": "arg0", "type": "address"}], "outputs": [{"type": "tuple", "components": [{"name": "activation", "type": "uint256"}, {"name": "last_report", "type": "uint256"}, {"name": "current_debt", "type": "uint256"}, {"name": "max_debt", "type": "uint256"}]}], "stateMutability": "view"},
     {"type": "event", "name": "Deposit", "inputs": [
         {"name": "sender", "type": "address", "indexed": true},
         {"name": "owner", "type": "address", "indexed": true},
